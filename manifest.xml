@@ -1,7 +1,7 @@
 <package>
-    <description brief="base types for robotic infrastructures">
-        This software package are header-only definitions of types that are
-        generally useful for algorithms in robotic systems.
+    <description brief="CMake find scripts and macros">
+        This software package contains CMake find scripts and macros
+        to facilitate developing CMake based libraries.
     </description>
     <author>Sylvain Joyeux/sylvain.joyeux@m4x.org</author>
     <copyright>
@@ -9,9 +9,5 @@
         Sylvain Joyeux/sylvain.joyeux@m4x.org
     </copyright>
     <license>LGPL v2 or later</license>
-
-    <depend package="external/sisl" optional="1" />
-    <rosdep name="eigen3" />
-    <rosdep name="boost" />
     <tags>stable</tags>
 </package>
