@@ -37,12 +37,27 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
 endmacro()
 
+# Allow for a global include dir schema by creating symlinks into the source directory
+# Manipulation of the source directory is prevented using individual export
+# directories (e.g. to prevent creating files within already symlinked directories)
 function(rock_export_includedir DIR TARGET_DIR)
-    execute_process(
-        COMMAND cmake -E make_directory ${PROJECT_BINARY_DIR}/include)
-    execute_process(
-        COMMAND cmake -E create_symlink ${DIR} ${PROJECT_BINARY_DIR}/include/${TARGET_DIR})
-    include_directories(BEFORE ${PROJECT_BINARY_DIR}/include)
+    string(REGEX REPLACE / "-" TARGET_INCLUDE_DIR ${TARGET_DIR})
+    set(_ROCK_ADD_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/_${TARGET_INCLUDE_DIR}_)
+    set(_ROCK_EXPORT_INCLUDE_DIR ${_ROCK_ADD_INCLUDE_DIR}/${TARGET_DIR})
+    if(NOT EXISTS ${_ROCK_EXPORT_INCLUDE_DIR})
+        # Making sure we create all required parent directories
+        execute_process(COMMAND cmake -E make_directory ${_ROCK_EXPORT_INCLUDE_DIR})
+
+        # Removing the leaf-node, i.e. create symlink instead
+        execute_process(COMMAND cmake -E remove_directory ${_ROCK_EXPORT_INCLUDE_DIR})
+        execute_process(COMMAND cmake -E create_symlink ${DIR} ${_ROCK_EXPORT_INCLUDE_DIR})
+        if(NOT EXISTS ${_ROCK_EXPORT_INCLUDE_DIR})
+            message(FATAL_ERROR "Export include dir '${DIR}' to '${_ROCK_EXPORT_INCLUDE_DIR}' failed")
+        endif()
+    else()
+        message(STATUS "Export include dir: '${_ROCK_EXPORT_INCLUDE_DIR}' already exists")
+    endif()
+    include_directories(BEFORE ${_ROCK_ADD_INCLUDE_DIR})
 endfunction()
 
 function(rock_add_source_dir DIR TARGET_DIR)
