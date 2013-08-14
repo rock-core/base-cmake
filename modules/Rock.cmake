@@ -61,8 +61,12 @@ function(rock_export_includedir DIR TARGET_DIR)
 endfunction()
 
 function(rock_add_source_dir DIR TARGET_DIR)
-    rock_export_includedir(${CMAKE_CURRENT_SOURCE_DIR}/${DIR}
+    if(IS_ABSOLUTE ${DIR})
+        rock_export_includedir(${DIR} ${TARGET_DIR})
+    else()
+        rock_export_includedir(${CMAKE_CURRENT_SOURCE_DIR}/${DIR}
         ${TARGET_DIR})
+    endif()
     add_subdirectory(${DIR})
 endfunction()
 
