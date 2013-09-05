@@ -140,7 +140,7 @@ macro(rock_standard_layout)
     if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/test)
         option(ROCK_TEST_ENABLED "set to OFF to disable the unit tests. Tests are automatically disabled if the boost unit test framework is not available" ON)
         if (ROCK_TEST_ENABLED)
-            find_package(Boost COMPONENTS unit_test_framework)
+            find_package(Boost COMPONENTS unit_test_framework system)
             if (Boost_UNIT_TEST_FRAMEWORK_FOUND)
                 message(STATUS "boost/test found ... building the test suite")
                 add_subdirectory(test)
@@ -614,8 +614,7 @@ endfunction()
 function(rock_testsuite TARGET_NAME)
     rock_executable(${TARGET_NAME} ${ARGN}
         NOINSTALL)
-    target_link_libraries(${TARGET_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-        ${Boost_SYSTEM_LIBRARY})
+    target_link_libraries(${TARGET_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
     add_test(RockTestSuite ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME})
 endfunction()
 
