@@ -209,7 +209,7 @@ endmacro()
 ## Common parsing of parameters for all the C/C++ target types
 macro(rock_target_definition TARGET_NAME)
     set(${TARGET_NAME}_INSTALL ON)
-    set(ROCK_TARGET_AVAILABLE_MODES "SOURCES;HEADERS;DEPS;DEPS_PKGCONFIG;DEPS_CMAKE;DEPS_PLAIN;MOC;LIBS")
+    set(ROCK_TARGET_AVAILABLE_MODES "SOURCES;HEADERS;DEPS;DEPS_PKGCONFIG;DEPS_CMAKE;DEPS_PLAIN;MOC;UI;LIBS")
 
     set(${TARGET_NAME}_MODE "SOURCES")
     foreach(ELEMENT ${ARGN})
@@ -305,6 +305,14 @@ macro(rock_target_definition TARGET_NAME)
          
         QT4_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC})
         list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_MOC_SRCS})
+
+        list(LENGTH ${TARGET_NAME}_UI QT_UI_LENGTH)
+        if (QT_UI_LENGTH GREATER 0)
+            rock_find_qt4()
+            QT4_WRAP_UI(${TARGET_NAME}_UI_HDRS ${${TARGET_NAME}_UI})
+            include_directories(${CMAKE_CURRENT_BINARY_DIR})
+            list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_UI_HDRS})
+        endif()
     endif()
 endmacro()
 
@@ -344,6 +352,7 @@ endmacro()
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [MOC qtsource1.hpp qtsource2.hpp])
+#     [UI qt_window.ui qt_widget.ui]
 #
 # Creates a C++ executable and (optionally) installs it
 #
@@ -366,6 +375,8 @@ endmacro()
 # implementation files are built into the library. If they are source files,
 # they get added to the library and the corresponding header file is passed to
 # moc.
+# UI: if the library is Qt-based, a list of ui files (only active if moc files are
+# present)
 function(rock_executable TARGET_NAME)
     rock_target_definition(${TARGET_NAME} ${ARGN})
 
@@ -412,6 +423,7 @@ endmacro()
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [HEADERS header1.hpp header2.hpp header3.hpp ...]
 #     [MOC qtsource1.hpp qtsource2.hpp]
+#     [UI qt_window.ui qt_widget.ui]
 #     [NOINSTALL])
 #
 # Creates and (optionally) installs a shared library.
@@ -440,6 +452,8 @@ endmacro()
 # resulting implementation files are built into the library. If they are source
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
+# UI: if the library is Qt-based, a list of ui files (only active if moc files are 
+# present)
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_library TARGET_NAME)
