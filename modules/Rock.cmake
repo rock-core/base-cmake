@@ -95,17 +95,17 @@ macro(rock_standard_layout)
 
     # Test for known types of Rock subprojects
     if(IS_DIRECTORY ${PROJECT_SOURCE_DIR}/viz)
-        option(ROCK_VIZ_ENABLED "set to OFF to disable the visualization plugin. Visualization plugins are automatically disabled if Rock's vizkit is not available" ON)
+        option(ROCK_VIZ_ENABLED "set to OFF to disable the visualization plugin. Visualization plugins are automatically disabled if Rock's vizkit3d is not available" ON)
         if (ROCK_VIZ_ENABLED)
-            if ("${PROJECT_NAME}" STREQUAL vizkit)
+            if ("${PROJECT_NAME}" STREQUAL vizkit3d)
                 add_subdirectory(viz)
             else()
-                rock_find_pkgconfig(vizkit vizkit)
-                if (vizkit_FOUND)
-                    message(STATUS "vizkit found ... building the vizkit plugin")
-                    rock_add_source_dir(viz vizkit)
+                rock_find_pkgconfig(vizkit3d vizkit3d)
+                if (vizkit3d_FOUND)
+                    message(STATUS "vizkit3d found ... building the vizkit3d plugin")
+                    rock_add_source_dir(viz vizkit3d)
                 else()
-                    message(STATUS "vizkit not found ... NOT building the vizkit plugin")
+                    message(STATUS "vizkit3d not found ... NOT building the vizkit3d plugin")
                 endif()
             endif()
         else()
@@ -196,9 +196,9 @@ macro (rock_add_plain_dependency VARIABLE)
 endmacro()
 
 macro (rock_find_qt4) 
-    find_package(Qt4 REQUIRED QtCore QtGui ${ARGN})
+    find_package(Qt4 REQUIRED QtCore QtGui QtOpenGl ${ARGN})
     include_directories(${QT_HEADERS_DIR})
-    foreach(__qtmodule__ QtCore QtGui ${ARGN})
+    foreach(__qtmodule__ QtCore QtGui QtOpenGl ${ARGN})
         string(TOUPPER ${__qtmodule__} __qtmodule__)
         add_definitions(${QT_${__qtmodule__}_DEFINITIONS})
         include_directories(${QT_${__qtmodule__}_INCLUDE_DIR})
@@ -474,7 +474,7 @@ function(rock_library TARGET_NAME)
     endif()
 endfunction()
 
-## Defines a new vizkit plugin
+## Defines a new vizkit3d plugin
 #
 # rock_vizkit_plugin(name
 #     SOURCES source.cpp source1.cpp ...
@@ -485,13 +485,13 @@ endfunction()
 #     [MOC qtsource1.hpp qtsource2.hpp]
 #     [NOINSTALL])
 #
-# Creates and (optionally) installs a shared library that defines a vizkit
-# plugin. In Rock, vizkit is the base for data display. Vizkit plugins are
-# plugins to the 3D display in vizkit.
+# Creates and (optionally) installs a shared library that defines a vizkit3d
+# plugin. In Rock, vizkit3d is the base for data display. Vizkit plugins are
+# plugins to the 3D display in vizkit3d.
 #
-# The library gets linked against the vizkit libraries automatically (no
+# The library gets linked against the vizkit3d libraries automatically (no
 # need to list them in DEPS_PKGCONFIG). Moreoer, unlike with a normal shared
-# library, the headers get installed in include/vizkit
+# library, the headers get installed in include/vizkit3d
 # 
 # The following arguments are mandatory:
 #
@@ -516,16 +516,16 @@ endfunction()
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_vizkit_plugin TARGET_NAME)
-    if (${PROJECT_NAME} STREQUAL "vizkit")
+    if (${PROJECT_NAME} STREQUAL "vizkit3d")
     else()
-        list(APPEND additional_deps DEPS_PKGCONFIG vizkit)
+        list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
     endif()
     rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
     if (${TARGET_NAME}_INSTALL)
         install(TARGETS ${TARGET_NAME}
             LIBRARY DESTINATION lib)
         install(FILES ${${TARGET_NAME}_HEADERS}
-            DESTINATION include/vizkit)
+            DESTINATION include/vizkit3d)
         install(FILES vizkit_plugin.rb
             DESTINATION lib/qt/designer/widgets
             RENAME ${PROJECT_NAME}_vizkit.rb
