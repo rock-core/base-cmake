@@ -45,11 +45,12 @@ function(rock_export_includedir DIR TARGET_DIR)
     set(_ROCK_ADD_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/_${TARGET_INCLUDE_DIR}_)
     set(_ROCK_EXPORT_INCLUDE_DIR ${_ROCK_ADD_INCLUDE_DIR}/${TARGET_DIR})
     if(NOT EXISTS ${_ROCK_EXPORT_INCLUDE_DIR})
-        # Making sure we create all required parent directories
-        execute_process(COMMAND cmake -E make_directory ${_ROCK_EXPORT_INCLUDE_DIR})
+        #get the subdir of the export path
+        get_filename_component(_ROCK_EXPORT_INCLUDE_SUBDIR ${_ROCK_EXPORT_INCLUDE_DIR} PATH)
 
-        # Removing the leaf-node, i.e. create symlink instead
-        execute_process(COMMAND cmake -E remove_directory ${_ROCK_EXPORT_INCLUDE_DIR})
+        # Making sure we create all required parent directories
+        file(MAKE_DIRECTORY ${_ROCK_EXPORT_INCLUDE_SUBDIR})
+
         execute_process(COMMAND cmake -E create_symlink ${DIR} ${_ROCK_EXPORT_INCLUDE_DIR})
         if(NOT EXISTS ${_ROCK_EXPORT_INCLUDE_DIR})
             message(FATAL_ERROR "Export include dir '${DIR}' to '${_ROCK_EXPORT_INCLUDE_DIR}' failed")
