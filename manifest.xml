@@ -9,5 +9,6 @@
         Sylvain Joyeux/sylvain.joyeux@m4x.org
     </copyright>
     <license>LGPL v2 or later</license>
+    <depend package="cmake" />
     <tags>stable</tags>
 </package>
