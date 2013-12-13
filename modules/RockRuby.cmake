@@ -1,11 +1,24 @@
 # This module finds the Ruby package and defines a ADD_RUBY_EXTENSION macro to
 # build and install Ruby extensions
-# 
 # Upon loading, it sets a RUBY_EXTENSIONS_AVAILABLE variable to true if Ruby
 # extensions can be built.
 #
 # The ADD_RUBY_EXTENSION macro can be used as follows:
 #  ADD_RUBY_EXTENSION(target_name source1 source2 source3 ...)
+#
+# The following example is specific to building extension using rice.
+# Thus, rice needs to be installed. If the extension can be build,
+# the <extension-name>_AVAILABLE will be set.
+#
+# include(RockRuby)
+# set(SOURCES your_extension.cpp)
+#
+# rock_ruby_rice_extension(your_extension_ruby ${SOURCES})
+# if(your_extension_ruby_AVAILABLE)
+#  ...
+#  do additional linking or testing
+#  ...
+# endif()
 #
 # 
 
@@ -114,10 +127,11 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
 	    target_link_libraries(${target} ${GEM_LIBRARIES})
 
 	    install(TARGETS ${target} LIBRARY DESTINATION ${RUBY_EXTENSIONS_INSTALL_DIR})
+            set(${target}_AVAILABLE TRUE)
         else()
-            message(STATUS "cannot find the rice gem")
+            message(WARNING "cannot find the rice gem -- extension ${target} will not be available")
+            set(${target}_AVAILABLE FALSE)
         endif()
-
     endfunction()
 
     # Adds the target 'test_bindings_ruby' in order to test the ruby extension
