@@ -121,7 +121,7 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
 
     macro(ROCK_RUBY_RICE_EXTENSION target)
         find_package(Gem COMPONENTS rice)
-        if (GEM_FOUND)
+        if (GEM_rice_FOUND)
             ROCK_RUBY_EXTENSION(${target} ${ARGN})
 	    include_directories(${GEM_INCLUDE_DIRS})
 	    target_link_libraries(${target} ${GEM_LIBRARIES})
