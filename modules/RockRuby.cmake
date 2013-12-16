@@ -119,7 +119,7 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
 	SET_TARGET_PROPERTIES(${target} PROPERTIES PREFIX "")
     endfunction()
 
-    function(ROCK_RUBY_RICE_EXTENSION target)
+    macro(ROCK_RUBY_RICE_EXTENSION target)
         find_package(Gem COMPONENTS rice)
         if (GEM_FOUND)
             ROCK_RUBY_EXTENSION(${target} ${ARGN})
@@ -132,7 +132,7 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
             message(WARNING "cannot find the rice gem -- extension ${target} will not be available")
             set(${target}_AVAILABLE FALSE)
         endif()
-    endfunction()
+    endmacro()
 
     # Adds the target 'test_bindings_ruby' in order to test the ruby extension
     # Assumes a test folder inside the extension
