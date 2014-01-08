@@ -35,6 +35,10 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     rock_add_compiler_flag_if_it_exists(-Wall)
     rock_add_compiler_flag_if_it_exists(-Wno-unused-local-typedefs)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
+
+    if (ROCK_TEST_ENABLED)
+        enable_testing()
+    endif()
 endmacro()
 
 # Allow for a global include dir schema by creating symlinks into the source directory
