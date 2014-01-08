@@ -22,11 +22,107 @@
 #
 # 
 
-FIND_PACKAGE(Ruby)
+find_package(Ruby)
 find_program(YARD_EXECUTABLE NAMES yard)
 if (NOT YARD_FOUND)
     message(STATUS "did not find Yard, the Ruby packages won't generate documentation")
 endif()
+
+# rock_add_ruby_package(NAME
+#   [RUBY_FILES rubyfile.rb rubydir]
+#   [EXT_PLAIN|EXT_RICE] extname file1 file2 file3
+#   )
+# 
+# Sets up the necessary build/install steps to handle the Ruby library in
+# the current source directory, integrating documentation generation as well as
+# unit tests
+#
+# The RUBY_FILES parameters are the name of Ruby files or directories containing
+# Ruby files that should be installed to form the Ruby part of the Ruby package.
+#
+# The EXT_* parameters must be given if there is an ext/ folder, to tell how
+# each extension should be built (using plain Ruby or Rice). extname is the
+# subdirectory of ext/ in which the extension code lies. The extension files
+# are given to the extension directory
+function(rock_add_ruby_package NAME)
+    set(mode START)
+    set(required OFF)
+    set(quiet OFF)
+    foreach(arg ${ARGN})
+        message(${arg})
+        if (arg STREQUAL "REQUIRED")
+            set(required ON)
+        elseif (arg STREQUAL "QUIET")
+            set(quiet ON)
+        elseif (arg STREQUAL "RUBY_FILES")
+            set(mode RUBY_FILES)
+        elseif (arg STREQUAL "EXT_PLAIN" OR arg STREQUAL "EXT_RICE")
+            set(ext_type ${arg})
+            set(mode EXT_NAME)
+        elseif (mode STREQUAL "EXT_NAME")
+            message(STATUS "name: ${arg}")
+            if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ext/${arg}")
+                set(extname "${arg}")
+                list(APPEND extension_names "${extname}")
+                set(${extname}_TYPE "${ext_type}")
+                set(mode EXT_FILES)
+            else()
+                message(FATAL_ERROR "rock_add_ruby_package: ${arg} was expected to be a subdirectory of ext/, but is not")
+            endif()
+        elseif (mode STREQUAL "RUBY_FILES")
+            list(APPEND RUBY_FILES "${arg}")
+        elseif (mode STREQUAL "EXT_FILES")
+            list(APPEND ${extname}_FILES "ext/${extname}/${arg}")
+        else()
+            message(FATAL_ERROR "rock_add_ruby_package: unexpected argument ${arg}")
+        endif()
+    endforeach()
+
+    set(${NAME}_AVAILABLE ON)
+    if (NOT RUBY_FOUND)
+        set(${NAME}_AVAILABLE OFF)
+    endif()
+
+    list(LENGTH extension_names has_extensions)
+    if (${NAME}_AVAILABLE AND has_extensions)
+        if (NOT RUBY_EXTENSIONS_AVAILABLE)
+            message(STATUS "the Ruby target ${NAME} need to build a Ruby extension, but this is not available")
+            set(${NAME}_AVAILABLE OFF)
+        endif()
+    endif()
+
+    if (${NAME}_AVAILABLE)
+        message(STATUS "${extension_names}")
+        foreach(extname ${extension_names})
+            if (${extname}_TYPE STREQUAL "EXT_PLAIN")
+                rock_ruby_extension(${NAME}-${extname} ${${extname}_FILES})
+            elseif (${extname}_TYPE STREQUAL "EXT_RICE")
+                rock_ruby_rice_extension(${NAME}-${extname} ${${extname}_FILES})
+            else()
+                message(FATAL_ERROR "invalid extension type '${${extname}_TYPE}' for '${extname}', expected either EXT_PLAIN or EXT_RICE")
+            endif()
+        endforeach()
+        rock_ruby_library(${NAME} ${${NAME}_RUBY_FILES})
+
+        if (IS_DIRECTORY test)
+            if (ROCK_TEST_ENABLED)
+                rock_ruby_test(${NAME})
+            endif()
+        endif()
+
+        if (YARD_EXECUTABLE)
+            rock_ruby_doc(${NAME})
+            rock_add_dummy_target_dependency(doc doc-${NAME}-ruby)
+        endif()
+    elseif (required)
+        message(FATAL_ERROR "cannot build required Ruby target ${NAME}")
+    elseif(NOT quiet)
+        message(STATUS "ignoring Ruby target ${NAME}, Ruby and/or the Ruby extension building environment could not be found")
+    endif()
+
+    set(${NAME}_AVAILABLE ${${NAME}_AVAILABLE}} PARENT_SCOPE)
+endfunction()
+
 if (NOT RUBY_FOUND)
     MESSAGE(STATUS "Ruby library not found. Skipping Ruby parts for this package")
 else()
