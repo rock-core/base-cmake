@@ -39,6 +39,17 @@ else()
             list(REMOVE_ITEM ARGN ${libname})
         endif()
 
+        if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/lib/${libname}.rb)
+            install(FILES lib/${libname}.rb
+                DESTINATION ${RUBY_LIBRARY_INSTALL_DIR})
+            list(REMOVE_ITEM ARGN lib/${libname}.rb)
+        endif()
+        if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib/${libname})
+            install(DIRECTORY lib/${libname}
+                DESTINATION ${RUBY_LIBRARY_INSTALL_DIR})
+            list(REMOVE_ITEM ARGN lib/${libname})
+        endif()
+
         foreach(to_install ${ARGN})
             if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${to_install})
                 install(DIRECTORY ${to_install}
