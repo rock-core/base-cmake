@@ -69,8 +69,24 @@ else()
                     DESTINATION share/rock/log/migration)
         endif()
     endfunction()
+
+    function(ROCK_TYPELIB_RUBY_PLUGIN)
+        install(FILES ${ARGN}
+            DESTINATION share/typelib/ruby)
+    endfunction()
+
+    function(ROCK_LOG_EXPORT)
+        if (EXISTS ${CMAKE_SOURCE_DIR}/src/log_export.rb)
+            configure_file(${CMAKE_SOURCE_DIR}/src/log_export.rb
+                ${CMAKE_BINARY_DIR}/log_export-${PROJECT_NAME}.rb COPYONLY)
+            install(FILES ${CMAKE_BINARY_DIR}/log_export-${PROJECT_NAME}.rb
+                    DESTINATION share/rock/log/export)
+        endif()
+    endfunction()
+
 endif()
 
+# The functions below are available only if we can build Ruby extensions
 IF(NOT RUBY_INCLUDE_PATH)
     MESSAGE(STATUS "Ruby library not found. Cannot build Ruby extensions")
     SET(RUBY_EXTENSIONS_AVAILABLE FALSE)
@@ -91,20 +107,6 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
     EXECUTE_PROCESS(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "puts RbConfig::CONFIG['CFLAGS']"
        OUTPUT_VARIABLE RUBY_CFLAGS)
     STRING(REPLACE "\n" "" RUBY_CFLAGS ${RUBY_CFLAGS})
-
-    function(ROCK_TYPELIB_RUBY_PLUGIN)
-        install(FILES ${ARGN}
-            DESTINATION share/typelib/ruby)
-    endfunction()
-
-    function(ROCK_LOG_EXPORT)
-        if (EXISTS ${CMAKE_SOURCE_DIR}/src/log_export.rb)
-            configure_file(${CMAKE_SOURCE_DIR}/src/log_export.rb
-                ${CMAKE_BINARY_DIR}/log_export-${PROJECT_NAME}.rb COPYONLY)
-            install(FILES ${CMAKE_BINARY_DIR}/log_export-${PROJECT_NAME}.rb
-                    DESTINATION share/rock/log/export)
-        endif()
-    endfunction()
 
     function(ROCK_RUBY_EXTENSION target)
 	INCLUDE_DIRECTORIES(${RUBY_INCLUDE_PATH})
