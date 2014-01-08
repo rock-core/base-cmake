@@ -29,7 +29,7 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     project(${PROJECT_NAME})
     set(PROJECT_VERSION ${PROJECT_VERSION})
     rock_use_full_rpath("${CMAKE_INSTALL_PREFIX}/lib")
-
+    include(GNUInstallDirs)
     include(CheckCXXCompilerFlag)
     include(FindPkgConfig)
     rock_add_compiler_flag_if_it_exists(-Wall)
@@ -141,7 +141,8 @@ macro(rock_standard_layout)
     endif()
 
     if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/configuration)
-	install(DIRECTORY ${PROJECT_SOURCE_DIR}/configuration/ DESTINATION configuration/${PROJECT_NAME}
+	install(DIRECTORY ${PROJECT_SOURCE_DIR}/configuration/
+            DESTINATION configuration/${PROJECT_NAME}
 	        FILES_MATCHING PATTERN "*" 
 	                       PATTERN "*.pc" EXCLUDE)
     endif()
@@ -394,7 +395,7 @@ function(rock_executable TARGET_NAME)
 
     if (${TARGET_NAME}_INSTALL)
         install(TARGETS ${TARGET_NAME}
-            RUNTIME DESTINATION bin)
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif()
 endfunction()
 
@@ -418,7 +419,7 @@ macro(rock_library_common TARGET_NAME)
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
         if (${TARGET_NAME}_INSTALL)
             install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
-                DESTINATION lib/pkgconfig)
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
         endif()
     endif()
 endmacro()
@@ -470,15 +471,15 @@ function(rock_library TARGET_NAME)
 
     if (${TARGET_NAME}_INSTALL)
         install(TARGETS ${TARGET_NAME}
-            LIBRARY DESTINATION lib
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             # On Windows the dll part of a library is treated as RUNTIME target
             # and the corresponding import library is treated as ARCHIVE target
-            ARCHIVE DESTINATION lib
-            RUNTIME DESTINATION bin)
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         # Install headers and keep directory structure
         foreach(HEADER ${${TARGET_NAME}_HEADERS})
             string(REGEX MATCH "(.*)[/\\]" DIR ${HEADER})
-            install(FILES ${HEADER} DESTINATION include/${PROJECT_NAME}/${DIR})
+            install(FILES ${HEADER} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}/${DIR})
         endforeach(HEADER)
     endif()
 endfunction()
@@ -532,11 +533,11 @@ function(rock_vizkit_plugin TARGET_NAME)
     rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
     if (${TARGET_NAME}_INSTALL)
         install(TARGETS ${TARGET_NAME}
-            LIBRARY DESTINATION lib)
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
         install(FILES ${${TARGET_NAME}_HEADERS}
-            DESTINATION include/vizkit3d)
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/vizkit3d)
         install(FILES vizkit_plugin.rb
-            DESTINATION lib/qt/designer/widgets
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/qt/designer/widgets
             RENAME ${PROJECT_NAME}_vizkit.rb
             OPTIONAL)
     endif()
@@ -592,14 +593,14 @@ function(rock_vizkit_widget TARGET_NAME)
     rock_library_common(${TARGET_NAME} ${ARGN})
     if (${TARGET_NAME}_INSTALL)
         install(TARGETS ${TARGET_NAME}
-            LIBRARY DESTINATION lib/qt/designer)
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/qt/designer)
         install(FILES ${${TARGET_NAME}_HEADERS}
-            DESTINATION include/${PROJECT_NAME})
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
         install(FILES ${TARGET_NAME}.rb
-            DESTINATION share/vizkit/ext
+            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/vizkit/ext
             OPTIONAL)
         install(FILES vizkit_widget.rb
-            DESTINATION lib/qt/designer/cplusplus_extensions
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/qt/designer/cplusplus_extensions
             RENAME ${PROJECT_NAME}_vizkit.rb
             OPTIONAL)
     endif()
