@@ -23,6 +23,10 @@
 # 
 
 FIND_PACKAGE(Ruby)
+find_program(YARD_EXECUTABLE NAMES yard)
+if (NOT YARD_FOUND)
+    message(STATUS "did not find Yard, the Ruby packages won't generate documentation")
+endif()
 if (NOT RUBY_FOUND)
     MESSAGE(STATUS "Ruby library not found. Skipping Ruby parts for this package")
 else()
@@ -84,6 +88,21 @@ else()
         endif()
     endfunction()
 
+    # rock_ruby_doc(TARGET)
+    #
+    # Create a target called doc-${TARGET}-ruby that generates the documentation
+    # for the Ruby package contained in the current directory, using Yard. The
+    # documentation is generated in the build folder under doc/${TARGET}
+    #
+    # Add a .yardopts file in the root of the embedded ruby package to configure
+    # Yard. See e.g. http://rubydoc.info/gems/yard/YARD/CLI/Yardoc. The output
+    # directory is overriden when cmake calls yard
+    function(rock_ruby_doc TARGET)
+        add_custom_target(doc-${TARGET}-ruby
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            ${YARD_EXECUTABLE} doc -o ${PROJECT_BINARY_DIR}/doc/${TARGET})
+    endfunction()
+
 endif()
 
 # The functions below are available only if we can build Ruby extensions
@@ -94,8 +113,6 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
     SET(RUBY_EXTENSIONS_AVAILABLE TRUE)
     STRING(REGEX REPLACE ".*lib(32|64)?/?" "lib/" RUBY_EXTENSIONS_INSTALL_DIR ${RUBY_ARCH_DIR})
     STRING(REGEX REPLACE ".*lib(32|64)?/?" "lib/" RUBY_LIBRARY_INSTALL_DIR ${RUBY_RUBY_LIB_PATH})
-
-    FIND_PROGRAM(RDOC_EXECUTABLE NAMES rdoc1.9 rdoc1.8 rdoc)
 
     EXECUTE_PROCESS(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "puts RUBY_VERSION"
        OUTPUT_VARIABLE RUBY_VERSION)
