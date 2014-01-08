@@ -630,7 +630,8 @@ function(rock_testsuite TARGET_NAME)
     rock_executable(${TARGET_NAME} ${ARGN}
         NOINSTALL)
     target_link_libraries(${TARGET_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-    add_test(RockTestSuite ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME})
+    add_test(NAME test-${TARGET_NAME}-cxx
+        COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME})
 endfunction()
 
 macro(rock_libraries_for_pkgconfig VARNAME)
