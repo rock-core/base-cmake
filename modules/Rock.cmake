@@ -635,6 +635,7 @@ endfunction()
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
 function(rock_testsuite TARGET_NAME)
+    add_definitions(-DBOOST_TEST_DYN_LINK)
     rock_executable(${TARGET_NAME} ${ARGN}
         NOINSTALL)
     target_link_libraries(${TARGET_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
