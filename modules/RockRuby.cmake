@@ -103,6 +103,53 @@ else()
             ${YARD_EXECUTABLE} doc -o ${PROJECT_BINARY_DIR}/doc/${TARGET})
     endfunction()
 
+    # rock_ruby_test([testfile1] [testfile2]
+    #   [WORKING_DIRECTORY workdir])
+    #
+    # Runs the given tests under minitest
+    #
+    # If no tests are given, will use the test/ subdirectory of the current
+    # source directory.
+    #
+    # The default working directory is the current source directory
+    function(ROCK_RUBY_TEST TARGET)
+        set(workdir ${CMAKE_CURRENT_SOURCE_DIR})
+        set(mode FILES)
+        foreach(arg ${ARGN})
+            if (arg STREQUAL "WORKING_DIRECTORY")
+                set(mode WORKING_DIRECTORY)
+            elseif (mode STREQUAL "WORKING_DIRECTORY")
+                set(workdir "${arg}")
+                set(mode "")
+            elseif (mode STREQUAL "FILES")
+                list(APPEND test_args "${arg}")
+            else()
+                message(FATAL_ERROR "trailing arguments ${arg} to rock_ruby_test")
+            endif()
+        endforeach()
+
+        list(LENGTH test_args has_test_args)
+        if (NOT has_test_args)
+            if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test)
+                list(APPEND test_args "${CMAKE_CURRENT_SOURCE_DIR}/test")
+            else()
+                message(FATAL_ERROR "rock_ruby_test: called without test files, and there is no test/ folder")
+            endif()
+        endif()
+
+        foreach(test_arg ${test_args})
+            if (IS_DIRECTORY ${test_arg})
+                file(GLOB_RECURSE dir_testfiles ${test_arg}/*.rb)
+                list(APPEND testfiles ${dir_testfiles})
+            else()
+                list(APPEND testfiles ${test_arg})
+            endif()
+        endforeach()
+
+        add_test(NAME test-${TARGET}-ruby
+            WORKING_DIRECTORY "${workdir}"
+            COMMAND ${RUBY_EXECUTABLE} -rminitest/autorun -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR} ${testfiles})
+    endfunction()
 endif()
 
 # The functions below are available only if we can build Ruby extensions
@@ -163,36 +210,5 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
             set(${target}_AVAILABLE FALSE)
         endif()
     endmacro()
-
-    # Adds the target 'test_bindings_ruby' in order to test the ruby extension
-    # Assumes a test folder inside the extension
-    function(ROCK_RUBY_TEST)
-        set(TEST_TARGET_NAME test_bindings_ruby)
-        STRING(COMPARE EQUAL "${ARGC}" "0" NO_ARGUMENT)
-
-        if(NO_ARGUMENT)
-            set(directory ${CMAKE_CURRENT_SOURCE_DIR})
-        else()
-            set(directory ${ARGN})
-        endif()
-
-        # Creating test script
-        set(TEST_SCRIPT_NAME "${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}-${TEST_TARGET_NAME}")
-
-        # Use all files in the test folder
-        file(GLOB TEST_FILES ${directory}/test/*.rb)
-        set(TEST_STRING "require 'rubygems'; require 'minitest/autorun';")
-        foreach(TEST_FILE ${TEST_FILES})
-            set(TEST_STRING "${TEST_STRING} require '${TEST_FILE}';")
-        endforeach()
-        set(TEST_STRING ${TEST_STRING})
-        file(WRITE "${TEST_SCRIPT_NAME}" "${TEST_STRING}")
-
-        add_custom_target(${TEST_TARGET_NAME}
-            WORKING_DIRECTORY ${directory}
-            COMMAND ruby -w -I. -I${CMAKE_BINARY_DIR} ${TEST_SCRIPT_NAME}
-            VERBATIM
-        )
-    endfunction()
 ENDIF(NOT RUBY_INCLUDE_PATH)
 
