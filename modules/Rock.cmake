@@ -639,6 +639,10 @@ endfunction()
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
 function(rock_testsuite TARGET_NAME)
+    if (TARGET_NAME STREQUAL "test")
+        message(WARNING "test name cannot be 'test', renaming to '${PROJECT_NAME}-test'")
+        set(TARGET_NAME "${PROJECT_NAME}-test")
+    endif()
     add_definitions(-DBOOST_TEST_DYN_LINK)
     rock_executable(${TARGET_NAME} ${ARGN}
         NOINSTALL)
