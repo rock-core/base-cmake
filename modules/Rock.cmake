@@ -435,6 +435,17 @@ macro(rock_library_common TARGET_NAME)
     rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL)
 endmacro()
 
+# Install list of headers and keep directory structure
+function(rock_install_headers HEADER_LIST)
+    # Note: using ARGV here, since it expand to the full argument list,
+    # otherwise the function would need to be called with a quoted list, e.g.
+    # rock_install_headers("${MY_LIST}")
+    foreach(HEADER ${ARGV})
+        string(REGEX MATCH "(.*)[/\\]" DIR ${HEADER})
+        install(FILES ${HEADER} DESTINATION include/${PROJECT_NAME}/${DIR})
+    endforeach(HEADER)
+endfunction()
+
 ## Defines a new shared library
 #
 # rock_library(name
@@ -487,11 +498,9 @@ function(rock_library TARGET_NAME)
             # and the corresponding import library is treated as ARCHIVE target
             ARCHIVE DESTINATION lib
             RUNTIME DESTINATION bin)
+
         # Install headers and keep directory structure
-        foreach(HEADER ${${TARGET_NAME}_HEADERS})
-            string(REGEX MATCH "(.*)[/\\]" DIR ${HEADER})
-            install(FILES ${HEADER} DESTINATION include/${PROJECT_NAME}/${DIR})
-        endforeach(HEADER)
+        rock_install_headers(${${TARGET_NAME}_HEADERS})
     endif()
 endfunction()
 
