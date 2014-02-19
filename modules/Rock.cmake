@@ -402,6 +402,21 @@ function(rock_executable TARGET_NAME)
     endif()
 endfunction()
 
+# Trigger the configuration of the pkg-config config file (*.pc.in)
+# Second option allows to select installation of the generated .pc file
+function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
+        if (DO_INSTALL)
+            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
+                DESTINATION lib/pkgconfig)
+        endif()
+    else()
+        message("pkg-config: ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in is not available for configuration")
+    endif()
+endfunction()
+
 ## Common setup for libraries in Rock. Used by rock_library and
 # rock_vizkit_plugin
 macro(rock_library_common TARGET_NAME)
@@ -417,14 +432,7 @@ macro(rock_library_common TARGET_NAME)
     set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
     set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
 
-    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
-        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
-        if (${TARGET_NAME}_INSTALL)
-            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
-                DESTINATION lib/pkgconfig)
-        endif()
-    endif()
+    rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL)
 endmacro()
 
 ## Defines a new shared library
