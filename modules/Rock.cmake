@@ -500,7 +500,9 @@ function(rock_library TARGET_NAME)
             RUNTIME DESTINATION bin)
 
         # Install headers and keep directory structure
-        rock_install_headers(${${TARGET_NAME}_HEADERS})
+        if(${TARGET_NAME}_HEADERS)
+            rock_install_headers(${${TARGET_NAME}_HEADERS})
+        endif()
     endif()
 endfunction()
 
