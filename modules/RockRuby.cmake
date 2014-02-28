@@ -122,7 +122,7 @@ endfunction()
 if (NOT RUBY_FOUND)
     MESSAGE(STATUS "Ruby library not found. Skipping Ruby parts for this package")
 else()
-    MESSAGE(STATUS "Ruby library found")
+    MESSAGE(STATUS "Ruby library found: ${RUBY_LIBRARY}")
     function(ROCK_RUBY_LIBRARY libname)
         if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${libname}.rb)
             install(FILES ${libname}.rb
