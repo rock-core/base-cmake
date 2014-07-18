@@ -183,7 +183,7 @@ macro (rock_find_pkgconfig VARIABLE)
         set(${VARIABLE}_LIBRARIES ${_${VARIABLE}_LIBRARIES} CACHE INTERNAL "")
     endif()
 
-    add_definitions(${${VARIABLE}_CFLAGS})
+    add_definitions(${${VARIABLE}_CFLAGS_OTHER})
     include_directories(${${VARIABLE}_INCLUDE_DIRS})
 endmacro()
 
@@ -196,8 +196,7 @@ endmacro()
 
 macro (rock_add_plain_dependency VARIABLE)
     string(TOUPPER ${VARIABLE} UPPER_VARIABLE)
-    add_definitions(${${VARIABLE}_CFLAGS})
-    add_definitions(${${UPPER_VARIABLE}_CFLAGS})
+
     # Normalize uppercase / lowercase
     foreach(__varname CFLAGS INCLUDE_DIRS INCLUDE_DIR LIBRARY_DIRS LIBRARY_DIR LIBRARIES)
         if (NOT ${VARIABLE}_${__varname})
@@ -211,6 +210,11 @@ macro (rock_add_plain_dependency VARIABLE)
             set(${VARIABLE}_${__varname}S "${${VARNAME}_${__varname}}")
         endif()
     endforeach()
+
+    # Be consistent with pkg-config
+    set(${VARIABLE}_CFLAGS_OTHER ${${VARIABLE}_CFLAGS})
+
+    add_definitions(${${VARIABLE}_CFLAGS_OTHER})
     include_directories(${${VARIABLE}_INCLUDE_DIRS})
     link_directories(${${VARIABLE}_LIBRARY_DIRS})
 endmacro()
@@ -287,7 +291,11 @@ macro(rock_target_definition TARGET_NAME)
             rock_libraries_for_pkgconfig(${TARGET_NAME}_PKGCONFIG_LIBS
                 ${${__dep}_LIBRARIES})
             set(${TARGET_NAME}_PKGCONFIG_CFLAGS
-                "${${TARGET_NAME}_PKGCONFIG_CFLAGS} ${${__dep}_CFLAGS}")
+                "${${TARGET_NAME}_PKGCONFIG_CFLAGS} ${${__dep}_CFLAGS_OTHER}")
+            foreach(__dep_incdir ${${__dep}_INCLUDE_DIRS})
+                set(${TARGET_NAME}_PKGCONFIG_CFLAGS
+                    "${${TARGET_NAME}_PKGCONFIG_CFLAGS} -I${__dep_incdir}")
+            endforeach()
         endforeach()
     endforeach()
 
