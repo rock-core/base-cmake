@@ -420,6 +420,13 @@ endfunction()
 # Trigger the configuration of the pkg-config config file (*.pc.in)
 # Second option allows to select installation of the generated .pc file
 function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
+    foreach(pkgname ${${TARGET_NAME}_PUBLIC_PKGCONFIG})
+        set(DEPS_PKGCONFIG "${DEPS_PKGCONFIG} ${pkgname}")
+    endforeach()
+    set(PKGCONFIG_REQUIRES ${${TARGET_NAME}_PKGCONFIG_REQUIRES})
+    set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
+    set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
+
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
@@ -436,17 +443,8 @@ endfunction()
 # rock_vizkit_plugin
 macro(rock_library_common TARGET_NAME)
     rock_target_definition(${TARGET_NAME} ${ARGN})
-
     add_library(${TARGET_NAME} SHARED ${${TARGET_NAME}_SOURCES})
     rock_target_setup(${TARGET_NAME})
-
-    foreach(pkgname ${${TARGET_NAME}_PUBLIC_PKGCONFIG})
-        set(DEPS_PKGCONFIG "${DEPS_PKGCONFIG} ${pkgname}")
-    endforeach()
-    set(PKGCONFIG_REQUIRES ${${TARGET_NAME}_PKGCONFIG_REQUIRES})
-    set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
-    set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
-
     rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL)
 endmacro()
 
