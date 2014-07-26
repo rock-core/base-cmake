@@ -183,7 +183,7 @@ macro (rock_find_pkgconfig VARIABLE)
         set(${VARIABLE}_LIBRARIES ${_${VARIABLE}_LIBRARIES} CACHE INTERNAL "")
     endif()
 
-    add_definitions(${${VARIABLE}_CFLAGS})
+    add_definitions(${${VARIABLE}_CFLAGS_OTHER})
     include_directories(${${VARIABLE}_INCLUDE_DIRS})
 endmacro()
 
@@ -196,16 +196,27 @@ endmacro()
 
 macro (rock_add_plain_dependency VARIABLE)
     string(TOUPPER ${VARIABLE} UPPER_VARIABLE)
-    add_definitions(${${VARIABLE}_CFLAGS})
-    add_definitions(${${UPPER_VARIABLE}_CFLAGS})
+
+    # Normalize uppercase / lowercase
+    foreach(__varname CFLAGS INCLUDE_DIRS INCLUDE_DIR LIBRARY_DIRS LIBRARY_DIR LIBRARIES)
+        if (NOT ${VARIABLE}_${__varname})
+            set(${VARIABLE}_${__varname} "${${UPPER_VARIABLE}_${__varname}}")
+        endif()
+    endforeach()
+
+    # Normalize plural/singular
+    foreach(__varname INCLUDE_DIR LIBRARY_DIR)
+        if (NOT ${VARIABLE}_${__varname}S)
+            set(${VARIABLE}_${__varname}S "${${VARNAME}_${__varname}}")
+        endif()
+    endforeach()
+
+    # Be consistent with pkg-config
+    set(${VARIABLE}_CFLAGS_OTHER ${${VARIABLE}_CFLAGS})
+
+    add_definitions(${${VARIABLE}_CFLAGS_OTHER})
     include_directories(${${VARIABLE}_INCLUDE_DIRS})
-    include_directories(${${VARIABLE}_INCLUDE_DIR})
     link_directories(${${VARIABLE}_LIBRARY_DIRS})
-    link_directories(${${VARIABLE}_LIBRARY_DIR})
-    include_directories(${${UPPER_VARIABLE}_INCLUDE_DIRS})
-    include_directories(${${UPPER_VARIABLE}_INCLUDE_DIR})
-    link_directories(${${UPPER_VARIABLE}_LIBRARY_DIRS})
-    link_directories(${${UPPER_VARIABLE}_LIBRARY_DIR})
 endmacro()
 
 macro (rock_find_qt4) 
@@ -280,7 +291,11 @@ macro(rock_target_definition TARGET_NAME)
             rock_libraries_for_pkgconfig(${TARGET_NAME}_PKGCONFIG_LIBS
                 ${${__dep}_LIBRARIES})
             set(${TARGET_NAME}_PKGCONFIG_CFLAGS
-                "${${TARGET_NAME}_PKGCONFIG_CFLAGS} ${${__dep}_CFLAGS}")
+                "${${TARGET_NAME}_PKGCONFIG_CFLAGS} ${${__dep}_CFLAGS_OTHER}")
+            foreach(__dep_incdir ${${__dep}_INCLUDE_DIRS})
+                set(${TARGET_NAME}_PKGCONFIG_CFLAGS
+                    "${${TARGET_NAME}_PKGCONFIG_CFLAGS} -I${__dep_incdir}")
+            endforeach()
         endforeach()
     endforeach()
 
@@ -405,6 +420,13 @@ endfunction()
 # Trigger the configuration of the pkg-config config file (*.pc.in)
 # Second option allows to select installation of the generated .pc file
 function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
+    foreach(pkgname ${${TARGET_NAME}_PUBLIC_PKGCONFIG})
+        set(DEPS_PKGCONFIG "${DEPS_PKGCONFIG} ${pkgname}")
+    endforeach()
+    set(PKGCONFIG_REQUIRES ${${TARGET_NAME}_PKGCONFIG_REQUIRES})
+    set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
+    set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
+
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
@@ -421,17 +443,8 @@ endfunction()
 # rock_vizkit_plugin
 macro(rock_library_common TARGET_NAME)
     rock_target_definition(${TARGET_NAME} ${ARGN})
-
     add_library(${TARGET_NAME} SHARED ${${TARGET_NAME}_SOURCES})
     rock_target_setup(${TARGET_NAME})
-
-    foreach(pkgname ${${TARGET_NAME}_PUBLIC_PKGCONFIG})
-        set(DEPS_PKGCONFIG "${DEPS_PKGCONFIG} ${pkgname}")
-    endforeach()
-    set(PKGCONFIG_REQUIRES ${${TARGET_NAME}_PKGCONFIG_REQUIRES})
-    set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
-    set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
-
     rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL)
 endmacro()
 
