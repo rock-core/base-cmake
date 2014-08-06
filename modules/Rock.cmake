@@ -207,7 +207,7 @@ macro (rock_add_plain_dependency VARIABLE)
     # Normalize plural/singular
     foreach(__varname INCLUDE_DIR LIBRARY_DIR)
         if (NOT ${VARIABLE}_${__varname}S)
-            set(${VARIABLE}_${__varname}S "${${VARNAME}_${__varname}}")
+            set(${VARIABLE}_${__varname}S "${${VARIABLE}_${__varname}}")
         endif()
     endforeach()
 
