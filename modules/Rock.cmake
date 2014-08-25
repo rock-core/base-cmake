@@ -443,8 +443,14 @@ endfunction()
 # rock_vizkit_plugin
 macro(rock_library_common TARGET_NAME)
     rock_target_definition(${TARGET_NAME} ${ARGN})
-    add_library(${TARGET_NAME} SHARED ${${TARGET_NAME}_SOURCES})
-    rock_target_setup(${TARGET_NAME})
+    # Skip the add_library part if the only thing the caller wants is to install
+    # headers
+    list(LENGTH ${TARGET_NAME}_SOURCES __source_list_size)
+    if (__source_list_size)
+        add_library(${TARGET_NAME} SHARED ${${TARGET_NAME}_SOURCES})
+        rock_target_setup(${TARGET_NAME})
+        set(${TARGET_NAME}_LIBRARY_HAS_TARGET TRUE)
+    endif()
     rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL)
 endmacro()
 
@@ -505,12 +511,14 @@ function(rock_library TARGET_NAME)
     rock_library_common(${TARGET_NAME} ${ARGN})
 
     if (${TARGET_NAME}_INSTALL)
-        install(TARGETS ${TARGET_NAME}
-            LIBRARY DESTINATION lib
-            # On Windows the dll part of a library is treated as RUNTIME target
-            # and the corresponding import library is treated as ARCHIVE target
-            ARCHIVE DESTINATION lib
-            RUNTIME DESTINATION bin)
+        if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
+            install(TARGETS ${TARGET_NAME}
+                LIBRARY DESTINATION lib
+                # On Windows the dll part of a library is treated as RUNTIME target
+                # and the corresponding import library is treated as ARCHIVE target
+                ARCHIVE DESTINATION lib
+                RUNTIME DESTINATION bin)
+        endif()
 
         # Install headers and keep directory structure
         if(${TARGET_NAME}_HEADERS)
@@ -567,8 +575,10 @@ function(rock_vizkit_plugin TARGET_NAME)
     endif()
     rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
     if (${TARGET_NAME}_INSTALL)
-        install(TARGETS ${TARGET_NAME}
-            LIBRARY DESTINATION lib)
+        if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
+            install(TARGETS ${TARGET_NAME}
+                LIBRARY DESTINATION lib)
+        endif()
         install(FILES ${${TARGET_NAME}_HEADERS}
             DESTINATION include/vizkit3d)
         install(FILES vizkit_plugin.rb
