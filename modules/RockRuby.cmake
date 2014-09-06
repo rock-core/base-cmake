@@ -277,10 +277,10 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
         target_link_libraries(${target} ${RUBY_LIBRARY})
 
         STRING(REGEX MATCH "arm.*" ARCH ${CMAKE_SYSTEM_PROCESSOR})
-        IF("${ARCH}" STREQUAL "")
+        IF("${ARCH}" STREQUAL "" AND NOT APPLE)
             set_target_properties(${target} PROPERTIES
                 LINK_FLAGS "-z noexecstack")
-        ENDIF("${ARCH}" STREQUAL "")
+        ENDIF("${ARCH}" STREQUAL "" AND NOT APPLE)
 	SET_TARGET_PROPERTIES(${target} PROPERTIES PREFIX "")
     endfunction()
 
