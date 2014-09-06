@@ -36,6 +36,11 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     rock_add_compiler_flag_if_it_exists(-Wno-unused-local-typedefs)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
 
+    IF(APPLE)
+        set(CMAKE_SHARED_MODULE_SUFFIX ".bundle")
+        set(CMAKE_MACOSX_RPATH 1)
+    ENDIF(APPLE)
+
     if (ROCK_TEST_ENABLED)
         enable_testing()
     endif()
@@ -447,7 +452,7 @@ macro(rock_library_common TARGET_NAME)
     # headers
     list(LENGTH ${TARGET_NAME}_SOURCES __source_list_size)
     if (__source_list_size)
-        add_library(${TARGET_NAME} SHARED ${${TARGET_NAME}_SOURCES})
+        add_library(${TARGET_NAME} ${${TARGET_NAME}_SOURCES})
         rock_target_setup(${TARGET_NAME})
         set(${TARGET_NAME}_LIBRARY_HAS_TARGET TRUE)
     endif()
@@ -508,7 +513,7 @@ endfunction()
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_library TARGET_NAME)
-    rock_library_common(${TARGET_NAME} ${ARGN})
+    rock_library_common(${TARGET_NAME} SHARED ${ARGN})
 
     if (${TARGET_NAME}_INSTALL)
         if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
@@ -573,7 +578,7 @@ function(rock_vizkit_plugin TARGET_NAME)
     else()
         list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
     endif()
-    rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
+    rock_library_common(${TARGET_NAME} MODULE ${ARGN} ${additional_deps})
     if (${TARGET_NAME}_INSTALL)
         if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
             install(TARGETS ${TARGET_NAME}
@@ -636,7 +641,7 @@ endfunction()
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_vizkit_widget TARGET_NAME)
-    rock_library_common(${TARGET_NAME} ${ARGN})
+    rock_library_common(${TARGET_NAME} MODULE ${ARGN})
     if (${TARGET_NAME}_INSTALL)
         install(TARGETS ${TARGET_NAME}
             LIBRARY DESTINATION lib/qt/designer)
