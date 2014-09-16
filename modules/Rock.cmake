@@ -593,14 +593,15 @@ endfunction()
 # widget. In Rock, vizkit is the base for data display. Vizkit widgets are
 # Qt designer widgets that can be seamlessly integrated in the vizkit framework.
 #
-# If a file exists that goes by the name <name>.rb exists, it is assumed to be
-# a ruby extension used to extend the C++ interface in ruby scripting. It gets
-# installed in share/vizkit/cplusplus_extensions, where vizkit is looking for
-# it.
+# If a file called <project_name>.rb exists, it is assumed to be a ruby
+# extension used to extend the C++ interface in ruby scripting. It gets
+# installed in share/vizkit/ext, where vizkit is looking for it. if a file
+# called vizkit_widget.rb exists it will be renamed and installed to
+# lib/qt/designer/cplusplus_extensions/<project_name>_vizkit.rb
 # 
-# The library gets linked against the QtCore librariy automatically (no
-# need to list them in DEPS_PKGCONFIG). Moreover, unlike with a normal shared
-# library, the headers get installed in include/package_name
+# List all libraries to link to in the DEPS_PKGCONFIG, including Qt-libraries
+# like QtCore. Unlike with a normal shared library, the headers get installed
+# in include/<project_name>
 # 
 # The following arguments are mandatory:
 #
