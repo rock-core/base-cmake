@@ -432,15 +432,11 @@ function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
     set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
     set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
 
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
-        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
-        if (DO_INSTALL)
-            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
-                DESTINATION lib/pkgconfig)
-        endif()
-    else()
-        message("pkg-config: ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in is not available for configuration")
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
+        ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
+    if (DO_INSTALL)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
+            DESTINATION lib/pkgconfig)
     endif()
 endfunction()
 
@@ -456,7 +452,6 @@ macro(rock_library_common TARGET_NAME LIB_TYPE)
         rock_target_setup(${TARGET_NAME})
         set(${TARGET_NAME}_LIBRARY_HAS_TARGET TRUE)
     endif()
-    rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL)
 endmacro()
 
 # Install list of headers and keep directory structure
@@ -514,6 +509,11 @@ endfunction()
 # argument is given, this is turned off
 function(rock_library TARGET_NAME)
     rock_library_common(${TARGET_NAME} SHARED ${ARGN})
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
+        rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL ${QUIET})
+    else()
+        message(WARNING "pkg-config: ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in is not available for configuration")
+    endif()
 
     if (${TARGET_NAME}_INSTALL)
         if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
