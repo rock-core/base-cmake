@@ -446,13 +446,13 @@ endfunction()
 
 ## Common setup for libraries in Rock. Used by rock_library and
 # rock_vizkit_plugin
-macro(rock_library_common TARGET_NAME)
+macro(rock_library_common TARGET_NAME LIB_TYPE)
     rock_target_definition(${TARGET_NAME} ${ARGN})
     # Skip the add_library part if the only thing the caller wants is to install
     # headers
     list(LENGTH ${TARGET_NAME}_SOURCES __source_list_size)
     if (__source_list_size)
-        add_library(${TARGET_NAME} ${${TARGET_NAME}_SOURCES})
+        add_library(${TARGET_NAME} ${LIB_TYPE} ${${TARGET_NAME}_SOURCES})
         rock_target_setup(${TARGET_NAME})
         set(${TARGET_NAME}_LIBRARY_HAS_TARGET TRUE)
     endif()
