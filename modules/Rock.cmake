@@ -416,6 +416,8 @@ function(rock_executable TARGET_NAME)
     add_executable(${TARGET_NAME} ${${TARGET_NAME}_SOURCES})
     rock_target_setup(${TARGET_NAME})
 
+    # Export the variable to the parent scope
+    set(${TARGET_NAME}_INSTALL ${${TARGET_NAME}_INSTALL} PARENT_SCOPE)
     if (${TARGET_NAME}_INSTALL)
         install(TARGETS ${TARGET_NAME}
             RUNTIME DESTINATION bin)
@@ -515,6 +517,8 @@ function(rock_library TARGET_NAME)
         message(WARNING "pkg-config: ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in is not available for configuration")
     endif()
 
+    # Export the variable to the parent scope
+    set(${TARGET_NAME}_INSTALL ${${TARGET_NAME}_INSTALL} PARENT_SCOPE)
     if (${TARGET_NAME}_INSTALL)
         if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
             install(TARGETS ${TARGET_NAME}
@@ -536,6 +540,7 @@ endfunction()
 #
 # rock_vizkit_plugin(name
 #     SOURCES source.cpp source1.cpp ...
+#     QTPLUGIN PluginLoader.cpp
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
@@ -578,12 +583,44 @@ function(rock_vizkit_plugin TARGET_NAME)
     else()
         list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
     endif()
-    rock_library_common(${TARGET_NAME} MODULE ${ARGN} ${additional_deps})
-    if (${TARGET_NAME}_INSTALL)
-        if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
-            install(TARGETS ${TARGET_NAME}
-                LIBRARY DESTINATION lib)
+
+    # Find out whether the caller use the QTPLUGIN marker. If not, build the
+    # library twice. If he did, use a more lightweight option
+    foreach(arg ${ARGN})
+        if (arg STREQUAL "QTPLUGIN")
+            set(mode QTPLUGIN)
+        elseif(mode STREQUAL "QTPLUGIN")
+            set(PLUGIN_SOURCE "${arg}")
+            set(mode "")
+        else()
+            list(APPEND LIB_ARGS "${arg}")
         endif()
+    endforeach()
+
+    if (NOT PLUGIN_SOURCE)
+        if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PluginLoader.cpp)
+            set(PLUGIN_SOURCE PluginLoader.cpp)
+        endif()
+    endif()
+
+    set(PLUGIN_TARGET_NAME ${TARGET_NAME}-plugin)
+    if (NOT PLUGIN_SOURCE)
+        rock_library(${TARGET_NAME} ${ARGN} ${additional_deps})
+        rock_library_common(${PLUGIN_TARGET_NAME}
+            MODULE ${ARGN})
+    else()
+        rock_library(${TARGET_NAME} ${LIB_ARGS} ${additional_deps})
+        rock_library_common(${PLUGIN_TARGET_NAME}
+            MODULE ${PLUGIN_SOURCE}
+            DEPS ${TARGET_NAME})
+    endif()
+    set_target_properties(${PLUGIN_TARGET_NAME}
+        PROPERTIES OUTPUT_NAME ${TARGET_NAME}
+                   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/plugins)
+
+    if (${TARGET_NAME}_INSTALL)
+        install(TARGETS ${PLUGIN_TARGET_NAME}
+            LIBRARY DESTINATION lib/vizkit3d)
         install(FILES ${${TARGET_NAME}_HEADERS}
             DESTINATION include/vizkit3d)
         install(FILES vizkit_plugin.rb
@@ -641,9 +678,41 @@ endfunction()
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_vizkit_widget TARGET_NAME)
-    rock_library_common(${TARGET_NAME} MODULE ${ARGN})
+    # Find out whether the caller use the QTPLUGIN marker. If not, build the
+    # library twice. If he did, use a more lightweight option
+    foreach(arg ${ARGN})
+        if (arg STREQUAL "QTPLUGIN")
+            set(mode QTPLUGIN)
+        elseif(mode STREQUAL "QTPLUGIN")
+            set(PLUGIN_SOURCE "${arg}")
+            set(mode "")
+        else()
+            list(APPEND LIB_ARGS "${arg}")
+        endif()
+    endforeach()
+
+    if (NOT PLUGIN_SOURCE)
+        if (EXISTS ${TARGET_NAME}Plugin.cpp)
+            set(PLUGIN_SOURCE ${TARGET_NAME}Plugin.cpp)
+        endif()
+    endif()
+
+    set(PLUGIN_TARGET_NAME ${TARGET_NAME}-plugin)
+    if (NOT PLUGIN_SOURCE)
+        rock_library(${TARGET_NAME} ${ARGN})
+        rock_library_common(${PLUGIN_TARGET_NAME} MODULE ${ARGN})
+    else()
+        rock_library(${TARGET_NAME} ${LIB_ARGS})
+        rock_library_common(${PLUGIN_TARGET_NAME}
+            MODULE ${PLUGIN_SOURCE}
+            DEPS ${TARGET_NAME})
+    endif()
+    set_target_properties(${PLUGIN_TARGET_NAME}
+        PROPERTIES OUTPUT_NAME ${TARGET_NAME}
+                   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/plugins)
+
     if (${TARGET_NAME}_INSTALL)
-        install(TARGETS ${TARGET_NAME}
+        install(TARGETS ${PLUGIN_TARGET_NAME}
             LIBRARY DESTINATION lib/qt/designer)
         install(FILES ${${TARGET_NAME}_HEADERS}
             DESTINATION include/${PROJECT_NAME})
