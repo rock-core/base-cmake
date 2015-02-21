@@ -607,7 +607,7 @@ function(rock_vizkit_plugin TARGET_NAME)
     if (NOT PLUGIN_SOURCE)
         rock_library(${TARGET_NAME} ${ARGN} ${additional_deps})
         rock_library_common(${PLUGIN_TARGET_NAME}
-            MODULE ${ARGN})
+            MODULE ${ARGN} ${additional_deps})
     else()
         rock_library(${TARGET_NAME} ${LIB_ARGS} ${additional_deps})
         rock_library_common(${PLUGIN_TARGET_NAME}
