@@ -195,15 +195,18 @@ else()
             ${YARD_EXECUTABLE} doc -o ${PROJECT_BINARY_DIR}/doc/${TARGET})
     endfunction()
 
-    # rock_ruby_test([testfile1] [testfile2]
+    # rock_ruby_test([FILES] testfile1 [testfile2]
     #   [WORKING_DIRECTORY workdir])
     #
-    # Runs the given tests under minitest
+    # Runs the given tests under minitest. The filenames following the FILES
+    # statement are a list of files or directories that should be require'd to
+    # run the tests. If directories are given, all files whose extension is 'rb'
+    # are added, recursively.
     #
     # If no tests are given, will use the test/ subdirectory of the current
     # source directory.
     #
-    # The default working directory is the current source directory
+    # The default working directory is the current source directory.
     function(ROCK_RUBY_TEST TARGET)
         set(workdir ${CMAKE_CURRENT_SOURCE_DIR})
         set(mode FILES)
