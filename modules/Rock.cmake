@@ -52,6 +52,11 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     rock_add_compiler_flag_if_it_exists(-Wno-unused-local-typedefs)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
 
+    IF(APPLE)
+        set(CMAKE_SHARED_MODULE_SUFFIX ".bundle")
+        set(CMAKE_MACOSX_RPATH 1)
+    ENDIF(APPLE)
+
     if (ROCK_TEST_ENABLED)
         enable_testing()
     endif()
@@ -427,6 +432,8 @@ function(rock_executable TARGET_NAME)
     add_executable(${TARGET_NAME} ${${TARGET_NAME}_SOURCES})
     rock_target_setup(${TARGET_NAME})
 
+    # Export the variable to the parent scope
+    set(${TARGET_NAME}_INSTALL ${${TARGET_NAME}_INSTALL} PARENT_SCOPE)
     if (${TARGET_NAME}_INSTALL)
         install(TARGETS ${TARGET_NAME}
             RUNTIME DESTINATION bin)
@@ -443,31 +450,26 @@ function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
     set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
     set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
 
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
-        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
-        if (DO_INSTALL)
-            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
-                DESTINATION lib/pkgconfig)
-        endif()
-    else()
-        message("pkg-config: ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in is not available for configuration")
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
+        ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
+    if (DO_INSTALL)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
+            DESTINATION lib/pkgconfig)
     endif()
 endfunction()
 
 ## Common setup for libraries in Rock. Used by rock_library and
 # rock_vizkit_plugin
-macro(rock_library_common TARGET_NAME)
+macro(rock_library_common TARGET_NAME LIB_TYPE)
     rock_target_definition(${TARGET_NAME} ${ARGN})
     # Skip the add_library part if the only thing the caller wants is to install
     # headers
     list(LENGTH ${TARGET_NAME}_SOURCES __source_list_size)
     if (__source_list_size)
-        add_library(${TARGET_NAME} SHARED ${${TARGET_NAME}_SOURCES})
+        add_library(${TARGET_NAME} ${LIB_TYPE} ${${TARGET_NAME}_SOURCES})
         rock_target_setup(${TARGET_NAME})
         set(${TARGET_NAME}_LIBRARY_HAS_TARGET TRUE)
     endif()
-    rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL)
 endmacro()
 
 # Install list of headers and keep directory structure
@@ -524,8 +526,15 @@ endfunction()
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_library TARGET_NAME)
-    rock_library_common(${TARGET_NAME} ${ARGN})
+    rock_library_common(${TARGET_NAME} SHARED ${ARGN})
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
+        rock_prepare_pkgconfig(${TARGET_NAME} ${TARGET_NAME}_INSTALL ${QUIET})
+    else()
+        message(WARNING "pkg-config: ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in is not available for configuration")
+    endif()
 
+    # Export the variable to the parent scope
+    set(${TARGET_NAME}_INSTALL ${${TARGET_NAME}_INSTALL} PARENT_SCOPE)
     if (${TARGET_NAME}_INSTALL)
         if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
             install(TARGETS ${TARGET_NAME}
@@ -547,6 +556,7 @@ endfunction()
 #
 # rock_vizkit_plugin(name
 #     SOURCES source.cpp source1.cpp ...
+#     QTPLUGIN PluginLoader.cpp
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
@@ -589,12 +599,44 @@ function(rock_vizkit_plugin TARGET_NAME)
     else()
         list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
     endif()
-    rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
-    if (${TARGET_NAME}_INSTALL)
-        if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
-            install(TARGETS ${TARGET_NAME}
-                LIBRARY DESTINATION lib)
+
+    # Find out whether the caller use the QTPLUGIN marker. If not, build the
+    # library twice. If he did, use a more lightweight option
+    foreach(arg ${ARGN})
+        if (arg STREQUAL "QTPLUGIN")
+            set(mode QTPLUGIN)
+        elseif(mode STREQUAL "QTPLUGIN")
+            set(PLUGIN_SOURCE "${arg}")
+            set(mode "")
+        else()
+            list(APPEND LIB_ARGS "${arg}")
         endif()
+    endforeach()
+
+    if (NOT PLUGIN_SOURCE)
+        if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PluginLoader.cpp)
+            set(PLUGIN_SOURCE PluginLoader.cpp)
+        endif()
+    endif()
+
+    set(PLUGIN_TARGET_NAME ${TARGET_NAME}-plugin)
+    if (NOT PLUGIN_SOURCE)
+        rock_library(${TARGET_NAME} ${ARGN} ${additional_deps})
+        rock_library_common(${PLUGIN_TARGET_NAME}
+            MODULE ${ARGN} ${additional_deps})
+    else()
+        rock_library(${TARGET_NAME} ${LIB_ARGS} ${additional_deps})
+        rock_library_common(${PLUGIN_TARGET_NAME}
+            MODULE ${PLUGIN_SOURCE}
+            DEPS ${TARGET_NAME})
+    endif()
+    set_target_properties(${PLUGIN_TARGET_NAME}
+        PROPERTIES OUTPUT_NAME ${TARGET_NAME}
+                   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/plugins)
+
+    if (${TARGET_NAME}_INSTALL)
+        install(TARGETS ${PLUGIN_TARGET_NAME}
+            LIBRARY DESTINATION lib/vizkit3d)
         install(FILES ${${TARGET_NAME}_HEADERS}
             DESTINATION include/vizkit3d)
         install(FILES vizkit_plugin.rb
@@ -652,9 +694,41 @@ endfunction()
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_vizkit_widget TARGET_NAME)
-    rock_library_common(${TARGET_NAME} ${ARGN})
+    # Find out whether the caller use the QTPLUGIN marker. If not, build the
+    # library twice. If he did, use a more lightweight option
+    foreach(arg ${ARGN})
+        if (arg STREQUAL "QTPLUGIN")
+            set(mode QTPLUGIN)
+        elseif(mode STREQUAL "QTPLUGIN")
+            set(PLUGIN_SOURCE "${arg}")
+            set(mode "")
+        else()
+            list(APPEND LIB_ARGS "${arg}")
+        endif()
+    endforeach()
+
+    if (NOT PLUGIN_SOURCE)
+        if (EXISTS ${TARGET_NAME}Plugin.cpp)
+            set(PLUGIN_SOURCE ${TARGET_NAME}Plugin.cpp)
+        endif()
+    endif()
+
+    set(PLUGIN_TARGET_NAME ${TARGET_NAME}-plugin)
+    if (NOT PLUGIN_SOURCE)
+        rock_library(${TARGET_NAME} ${ARGN})
+        rock_library_common(${PLUGIN_TARGET_NAME} MODULE ${ARGN})
+    else()
+        rock_library(${TARGET_NAME} ${LIB_ARGS})
+        rock_library_common(${PLUGIN_TARGET_NAME}
+            MODULE ${PLUGIN_SOURCE}
+            DEPS ${TARGET_NAME})
+    endif()
+    set_target_properties(${PLUGIN_TARGET_NAME}
+        PROPERTIES OUTPUT_NAME ${TARGET_NAME}
+                   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/plugins)
+
     if (${TARGET_NAME}_INSTALL)
-        install(TARGETS ${TARGET_NAME}
+        install(TARGETS ${PLUGIN_TARGET_NAME}
             LIBRARY DESTINATION lib/qt/designer)
         install(FILES ${${TARGET_NAME}_HEADERS}
             DESTINATION include/${PROJECT_NAME})
