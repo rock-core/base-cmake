@@ -271,6 +271,11 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
        OUTPUT_VARIABLE RUBY_CFLAGS)
     STRING(REPLACE "\n" "" RUBY_CFLAGS ${RUBY_CFLAGS})
 
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        #Clang can't handle this option (04.2014) remove this flag therefore
+        STRING(REPLACE "-fstack-protector-strong" "" RUBY_CFLAGS ${RUBY_CFLAGS})
+    endif()
+
     function(ROCK_RUBY_EXTENSION target)
 	INCLUDE_DIRECTORIES(${RUBY_INCLUDE_PATH})
         list(GET ${RUBY_INCLUDE_PATH} 0 rubylib_path)
