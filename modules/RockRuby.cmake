@@ -271,9 +271,12 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
        OUTPUT_VARIABLE RUBY_CFLAGS)
     STRING(REPLACE "\n" "" RUBY_CFLAGS ${RUBY_CFLAGS})
 
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        #Clang can't handle this option (04.2014) remove this flag therefore
-        STRING(REPLACE "-fstack-protector-strong" "" RUBY_CFLAGS ${RUBY_CFLAGS})
+    if("${RUBY_CFLAGS}" MATCHES "-fstack-protector-strong")
+        include(CheckCXXCompilerFlag)
+        CHECK_CXX_COMPILER_FLAG("-fstack-protector-strong" COMPILER_SUPPORTS_SMASH_PROTECTION)
+        if(NOT COMPILER_SUPPORTS_SMASH_PROTECTION)
+            STRING(REPLACE "-fstack-protector-strong" "" RUBY_CFLAGS ${RUBY_CFLAGS})
+        endif()
     endif()
 
     function(ROCK_RUBY_EXTENSION target)
@@ -288,10 +291,8 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
 
         STRING(REGEX MATCH "arm.*" ARCH ${CMAKE_SYSTEM_PROCESSOR})
         IF("${ARCH}" STREQUAL "")
-            if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-                set_target_properties(${target} PROPERTIES
-                    LINK_FLAGS "-z noexecstack")
-            endif()
+            set_target_properties(${target} PROPERTIES
+                LINK_FLAGS "-Wl,-z,noexecstack")
         ENDIF("${ARCH}" STREQUAL "")
 	SET_TARGET_PROPERTIES(${target} PROPERTIES PREFIX "")
     endfunction()
