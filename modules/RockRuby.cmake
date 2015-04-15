@@ -274,6 +274,9 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
 
 	SET_SOURCE_FILES_PROPERTIES(${ARGN} PROPERTIES COMPILE_FLAGS "${RUBY_CFLAGS}")
         rock_library_common(${target} MODULE ${ARGN})
+        IF(APPLE)
+            set_property(TARGET ${target} PROPERTY SUFFIX ".bundle")
+        ENDIF(APPLE)
         target_link_libraries(${target} ${RUBY_LIBRARY})
 
         STRING(REGEX MATCH "arm.*" ARCH ${CMAKE_SYSTEM_PROCESSOR})
