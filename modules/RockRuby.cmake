@@ -249,7 +249,7 @@ else()
 
         add_test(NAME test-${TARGET}-ruby
             WORKING_DIRECTORY "${workdir}"
-            COMMAND ${RUBY_EXECUTABLE} -rminitest/autorun -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -e "${test_requires}")
+            COMMAND ${RUBY_EXECUTABLE} -rminitest/autorun -I${CMAKE_CURRENT_SOURCE_DIR}/lib -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -e "${test_requires}")
     endfunction()
 endif()
 
