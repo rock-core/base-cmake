@@ -50,6 +50,7 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     endif()
     rock_add_compiler_flag_if_it_exists(-Wall)
     rock_add_compiler_flag_if_it_exists(-Wno-unused-local-typedefs)
+    rock_add_compiler_flag_if_it_exists(-Wnon-virtual-dtor)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
 
     if (ROCK_TEST_ENABLED)
