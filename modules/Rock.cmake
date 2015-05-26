@@ -318,7 +318,11 @@ macro(rock_target_definition TARGET_NAME)
 
     list(LENGTH ${TARGET_NAME}_MOC QT_SOURCE_LENGTH)
     if (QT_SOURCE_LENGTH GREATER 0)
-        rock_find_qt4()
+        if(NOT TARGET Qt4::moc)
+            message(WARNING "you are requesting moc generation, but did not call rock_find_qt4(). Explicitely add rock_find_qt4() in your root CMakeLists.txt, just before calling rock_standard_layout()")
+            rock_find_qt4()
+        endif()
+
         list(APPEND ${TARGET_NAME}_DEPENDENT_LIBS ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY}) 
 
         set(__${TARGET_NAME}_MOC "${${TARGET_NAME}_MOC}")
@@ -353,7 +357,6 @@ macro(rock_target_definition TARGET_NAME)
 
         list(LENGTH ${TARGET_NAME}_UI QT_UI_LENGTH)
         if (QT_UI_LENGTH GREATER 0)
-            rock_find_qt4()
             QT4_WRAP_UI(${TARGET_NAME}_UI_HDRS ${${TARGET_NAME}_UI})
             include_directories(${CMAKE_CURRENT_BINARY_DIR})
             list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_UI_HDRS})
