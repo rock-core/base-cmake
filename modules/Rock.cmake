@@ -26,6 +26,17 @@ macro(rock_use_full_rpath install_rpath)
     # add the automatically determined parts of the RPATH
     # which point to directories outside the build tree to the insgall RPATH
     SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+    if(APPLE)
+        SET(CMAKE_INSTALL_NAME_DIR ${install_rpath})
+        Set(CMAKE_MACOSX_RPATH ON)
+    endif(APPLE)
+
+    #do not add if system directory
+    list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${install_rpath}" isSystemDir)
+    if("${isSystemDir}" STREQUAL "-1")
+        set(CMAKE_INSTALL_RPATH "${install_rpath}")
+    endif()
 endmacro()
 
 function(rock_add_compiler_flag_if_it_exists FLAG)
