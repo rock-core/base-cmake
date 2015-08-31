@@ -21,6 +21,10 @@
 # endif()
 #
 # 
+# If installed to a target directory set the following to true to
+# make it project specific
+# set(RUBY_USE_PROJECT_INSTALL_PREFIX TRUE)
+#
 
 find_package(Ruby)
 find_program(YARD NAMES yard)
@@ -261,6 +265,12 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
     SET(RUBY_EXTENSIONS_AVAILABLE TRUE)
     STRING(REGEX REPLACE ".*lib(32|64)?/?" "lib/" RUBY_EXTENSIONS_INSTALL_DIR ${RUBY_ARCH_DIR})
     STRING(REGEX REPLACE ".*lib(32|64)?/?" "lib/" RUBY_LIBRARY_INSTALL_DIR ${RUBY_RUBY_LIB_PATH})
+
+    IF(RUBY_USE_PROJECT_INSTALL_PREFIX AND PROJECT_NAME)
+        message(INFO "Install prefix for extensions is using project name: ${PROJECT_NAME}")
+        set(RUBY_EXTENSIONS_INSTALL_DIR ${RUBY_EXTENSIONS_INSTALL_DIR}/${PROJECT_NAME})
+        set(RUBY_LIBRARY_INSTALL_DIR ${RUBY_LIBRARY_INSTALL_DIR}/${PROJECT_NAME})
+    ENDIF()
 
     EXECUTE_PROCESS(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "puts RUBY_VERSION"
        OUTPUT_VARIABLE RUBY_VERSION)
