@@ -132,11 +132,6 @@ foreach(Gem_NAME ${Gem_FIND_COMPONENTS})
             message(STATUS "GEM_LIBRARIES ${GEM_LIBRARIES}")
         endif()
     endif()
-
-    if(GEM_DEBUG)
-		message(STATUS "${Gem_NAME} library dir: ${GEM_LIBRARIES}")
-		message(STATUS "${Gem_NAME} include dir: ${GEM_INCLUDE_DIRS}")
-    endif()
 endforeach()
 
 # Compact the lists
@@ -145,6 +140,11 @@ if(DEFINED GEM_LIBRARIES)
 endif()
 if(DEFINED GEM_INCLUDE_DIRS)
     LIST(REMOVE_DUPLICATES GEM_INCLUDE_DIRS)
+endif()
+
+if(GEM_DEBUG)
+    message(STATUS "${Gem_NAME} libraries: ${GEM_LIBRARIES}")
+    message(STATUS "${Gem_NAME} include dir: ${GEM_INCLUDE_DIRS}")
 endif()
 
 find_package_handle_standard_args(GEM

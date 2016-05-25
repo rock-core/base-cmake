@@ -21,6 +21,10 @@
 # endif()
 #
 # 
+# If installed to a target directory set the following to true to
+# make it project specific
+# set(RUBY_USE_PROJECT_INSTALL_PREFIX TRUE)
+#
 
 find_package(Ruby)
 find_program(YARD NAMES yard)
@@ -262,6 +266,12 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
     STRING(REGEX REPLACE ".*lib(32|64)?/?" "lib/" RUBY_EXTENSIONS_INSTALL_DIR ${RUBY_ARCH_DIR})
     STRING(REGEX REPLACE ".*lib(32|64)?/?" "lib/" RUBY_LIBRARY_INSTALL_DIR ${RUBY_RUBY_LIB_PATH})
 
+    IF(RUBY_USE_PROJECT_INSTALL_PREFIX AND PROJECT_NAME)
+        message(INFO "Install prefix for extensions is using project name: ${PROJECT_NAME}")
+        set(RUBY_EXTENSIONS_INSTALL_DIR ${RUBY_EXTENSIONS_INSTALL_DIR}/${PROJECT_NAME})
+        set(RUBY_LIBRARY_INSTALL_DIR ${RUBY_LIBRARY_INSTALL_DIR}/${PROJECT_NAME})
+    ENDIF()
+
     EXECUTE_PROCESS(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "puts RUBY_VERSION"
        OUTPUT_VARIABLE RUBY_VERSION)
     STRING(REPLACE "\n" "" RUBY_VERSION ${RUBY_VERSION})
@@ -304,17 +314,27 @@ ELSEIF(NOT RUBY_EXTENSIONS_AVAILABLE)
 
     macro(ROCK_RUBY_RICE_EXTENSION target)
         find_package(Gem COMPONENTS rice)
-        if (GEM_rice_FOUND)
-            ROCK_RUBY_EXTENSION(${target} ${ARGN})
-	    include_directories(${GEM_INCLUDE_DIRS})
-	    target_link_libraries(${target} ${GEM_LIBRARIES})
+        # Fallback to preinstalled package
+        if (NOT GEM_rice_FOUND)
+            set(GEM_OS_PKG ON)
+            find_package(Gem COMPONENTS rice)
+        endif()
 
-	    install(TARGETS ${target} LIBRARY DESTINATION ${RUBY_EXTENSIONS_INSTALL_DIR})
+        if(GEM_rice_FOUND)
+            message(STATUS "Using rice library: ${GEM_LIBRARIES}")
+            ROCK_RUBY_EXTENSION(${target} ${ARGN})
+            include_directories(${GEM_INCLUDE_DIRS})
+            target_link_libraries(${target} ${GEM_LIBRARIES})
+            if(NOT RUBY_EXTENSIONS_INSTALL_DIR EQUAL "")
+                message(STATUS "Ruby extension installation dir: ${RUBY_EXTENSIONS_INSTALL_DIR}")
+                install(TARGETS ${target} LIBRARY DESTINATION ${RUBY_EXTENSIONS_INSTALL_DIR})
+            endif()
             set(${target}_AVAILABLE TRUE)
         else()
-            message(WARNING "cannot find the rice gem -- extension ${target} will not be available")
+            message(WARNING "cannot find the rice gem or its system package -- extension ${target} will not be available")
             set(${target}_AVAILABLE OFF)
         endif()
+
     endmacro()
 ENDIF(NOT RUBY_INCLUDE_PATH)
 
