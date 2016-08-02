@@ -56,8 +56,6 @@ foreach(Gem_NAME ${Gem_FIND_COMPONENTS})
     list(APPEND components_found_vars GEM_${Gem_NAME}_FOUND)
     # If the gem is installed as a gem
     if(NOT GEM_OS_PKG)
-	    set(GEM_HOME ENV{GEM_HOME})
-
         # Use `gem content <gem-name>` to extract current information about installed gems
         # Store the information into ${GEM_LOCAL_INFO}
         EXECUTE_PROCESS(COMMAND ${GEM_EXECUTABLE} content ${Gem_NAME}
