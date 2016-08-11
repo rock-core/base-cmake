@@ -52,12 +52,10 @@ if(NOT Gem_FIND_COMPONENTS)
 endif()
 
 foreach(Gem_NAME ${Gem_FIND_COMPONENTS})
-    set(GEM_${Gem_NAME}_FOUND TRUE)
+    set(GEM_${Gem_NAME}_FOUND FALSE)
     list(APPEND components_found_vars GEM_${Gem_NAME}_FOUND)
     # If the gem is installed as a gem
     if(NOT GEM_OS_PKG)
-	    set(GEM_HOME ENV{GEM_HOME})
-
         # Use `gem content <gem-name>` to extract current information about installed gems
         # Store the information into ${GEM_LOCAL_INFO}
         EXECUTE_PROCESS(COMMAND ${GEM_EXECUTABLE} content ${Gem_NAME}
@@ -112,12 +110,13 @@ foreach(Gem_NAME ${Gem_FIND_COMPONENTS})
                     endif()
                 endforeach()
             endforeach()
+            set(GEM_${Gem_NAME}_FOUND TRUE)
         else()
             set(GEM_${Gem_NAME}_FOUND FALSE)
         endif()
     else(NOT GEM_OS_PKG)
         pkg_check_modules(GEM_PKG ${Gem_NAME})
-        set(GEM_${GEM_NAME}_FOUND GEM_PKG_FOUND)
+        set(GEM_${Gem_NAME}_FOUND ${GEM_PKG_FOUND})
         set(GEM_INCLUDE_DIRS ${GEM_PKG_INCLUDE_DIRS})
         set(GEM_LIBRARIES ${GEM_PKG_LIBRARIES} ${GEM_PKG_STATIC_LIBRARIES})
         list(APPEND GEM_LIBRARIES ${GEM_PKG_LDFLAGS} ${GEM_PKG_STATIC_LDFLAGS})
