@@ -739,8 +739,19 @@ function(rock_testsuite TARGET_NAME)
     rock_executable(${TARGET_NAME} ${ARGN}
         NOINSTALL)
     target_link_libraries(${TARGET_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+
+    if (ROCK_TEST_LOG_DIR)
+        list(APPEND __boost_test_parameters
+            --log_format=xml
+            --log_level=all
+            --log_sink=${ROCK_TEST_LOG_DIR}/${TARGET_NAME}.boost.xml)
+        file(MAKE_DIRECTORY "${ROCK_TEST_LOG_DIR}")
+    endif()
+
+
     add_test(NAME test-${TARGET_NAME}-cxx
-        COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME})
+        COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
+        ${__boost_test_parameters})
 endfunction()
 
 macro(rock_libraries_for_pkgconfig VARNAME)
