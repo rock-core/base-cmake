@@ -3,7 +3,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules")
 include(${CMAKE_CURRENT_SOURCE_DIR}/modules/Rock.cmake)
 rock_init(cmake 1.0)
 
-configure_file(modules/rock-config.cmake.in rock-config.cmake @ONLY)
 install(FILES
     modules/FindBoost.cmake
     modules/FindGem.cmake
@@ -15,6 +14,6 @@ install(FILES
     modules/PythonInstallPath.cmake
     modules/Rock.cmake
     modules/RockRuby.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/rock-config.cmake
+    modules/rock-config.cmake
     DESTINATION share/rock/cmake)
 
