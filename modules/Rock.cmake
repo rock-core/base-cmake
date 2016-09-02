@@ -743,14 +743,43 @@ function(rock_testsuite TARGET_NAME)
         COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME})
 endfunction()
 
+## Get the library name from a given path
+#
+# rock_get_library_name(<output_variable> <input>)
+#
+# e.g.
+#   rock_get_library_name(LIB_NAME "/usr/lib/libpython-2.7.so.0")
+# will result in LIB_NAME=python-2.7
+#
+macro(rock_get_library_name VARNAME)
+    get_filename_component(__lib_name ${ARGN} NAME)
+    foreach(__lib_suffix ${CMAKE_FIND_LIBRARY_SUFFIXES})
+        if("${__lib_name}" MATCHES "${__lib_suffix}")
+            string(REGEX REPLACE "${__lib_suffix}\\..*$"
+                "${__lib_suffix}" __lib_name "${__lib_name}")
+            string(REGEX REPLACE "${__lib_suffix}$" "" __lib_name
+                    "${__lib_name}")
+            break()
+        endif()
+    endforeach()
+
+    foreach(__lib_prefix ${CMAKE_FIND_LIBRARY_PREFIXES})
+        if("${__lib_name}" MATCHES "${__lib_prefix}")
+            string(REGEX REPLACE "^${__lib_prefix}" "" __lib_name
+                "${__lib_name}")
+            break()
+        endif()
+    endforeach()
+    set(${VARNAME} "${__lib_name}")
+endmacro()
+
 macro(rock_libraries_for_pkgconfig VARNAME)
     foreach(__lib ${ARGN})
         string(STRIP __lib ${__lib})
         string(SUBSTRING ${__lib} 0 1 __lib_is_absolute)
         if (__lib_is_absolute STREQUAL "/")
             get_filename_component(__lib_path ${__lib} PATH)
-            get_filename_component(__lib_name ${__lib} NAME_WE)
-            string(REGEX REPLACE "^lib" "" __lib_name "${__lib_name}")
+            rock_get_library_name(__lib_name ${__lib})
             set(${VARNAME} "${${VARNAME}} -L${__lib_path} -l${__lib_name}")
         else()
             set(${VARNAME} "${${VARNAME}} ${__lib}")
