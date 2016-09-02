@@ -61,7 +61,6 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     endif()
     rock_add_compiler_flag_if_it_exists(-Wall)
     rock_add_compiler_flag_if_it_exists(-Wno-unused-local-typedefs)
-    rock_add_compiler_flag_if_it_exists(-Wnon-virtual-dtor)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
 
     if (ROCK_TEST_ENABLED)
@@ -288,6 +287,8 @@ macro(rock_target_definition TARGET_NAME)
             set(${TARGET_NAME}_MODE "${ELEMENT}")
         elseif("${ELEMENT}" STREQUAL "NOINSTALL")
             set(${TARGET_NAME}_INSTALL OFF)
+        elseif("${ELEMENT}" STREQUAL "CLANG")
+            set(${TARGET_NAME}_CLANG TRUE)
         else()
             list(APPEND ${TARGET_NAME}_${${TARGET_NAME}_MODE} "${ELEMENT}")
         endif()
@@ -401,6 +402,14 @@ macro(rock_target_setup TARGET_NAME)
     set_property(TARGET ${TARGET_NAME}
         PROPERTY DEPS_PUBLIC_CMAKE ${${TARGET_NAME}_PUBLIC_CMAKE})
 
+    if (NOT ${TARGET_NAME}_CLANG)
+        CHECK_CXX_COMPILER_FLAG("-Wnon-virtual-dtor" CXX_SUPPORTS_NON_VIRTUAL_DTOR)
+        if (CXX_SUPPORTS_NON_VIRTUAL_DTOR)
+            set_target_properties(${TARGET_NAME}
+                                  PROPERTIES COMPILE_FLAGS "-Wnon-virtual-dtor")
+        endif()
+    endif()
+
     foreach (plain_dep ${${TARGET_NAME}_DEPS_PLAIN})
         target_link_libraries(${TARGET_NAME} ${${plain_dep}_LIBRARIES}
             ${${plain_dep}_LIBRARY})
@@ -429,6 +438,7 @@ endmacro()
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [MOC qtsource1.hpp qtsource2.hpp])
 #     [UI qt_window.ui qt_widget.ui]
+#     [CLANG]
 #
 # Creates a C++ executable and (optionally) installs it
 #
@@ -453,6 +463,8 @@ endmacro()
 # moc.
 # UI: if the library is Qt-based, a list of ui files (only active if moc files are
 # present)
+# CLANG: use this if the code is written in C
+
 function(rock_executable TARGET_NAME)
     rock_target_definition(${TARGET_NAME} ${ARGN})
 
@@ -524,7 +536,8 @@ endfunction()
 #     [HEADERS header1.hpp header2.hpp header3.hpp ...]
 #     [MOC qtsource1.hpp qtsource2.hpp]
 #     [UI qt_window.ui qt_widget.ui]
-#     [NOINSTALL])
+#     [NOINSTALL]
+#     [CLANG])
 #
 # Creates and (optionally) installs a shared library.
 #
@@ -556,6 +569,8 @@ endfunction()
 # present)
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
+# CLANG: use this if the library is written in C to avoid the use of unsupported
+# compiler flags and arguments
 function(rock_library TARGET_NAME)
     rock_library_common(${TARGET_NAME} ${ARGN})
 
