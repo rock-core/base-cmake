@@ -18,7 +18,7 @@ macro(rock_use_full_rpath install_rpath)
 
     # when building, don't use the install RPATH already
     # (but later on when installing)
-    SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+    SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
     # the RPATH to be used when installing
     SET(CMAKE_INSTALL_RPATH ${install_rpath})
@@ -226,7 +226,28 @@ endmacro()
 ## Like find_package, but calls include_directories and link_directories using
 # the resulting information
 macro (rock_find_cmake VARIABLE)
+    set(cmake_pkg ${VARIABLE})
+    string(TOUPPER ${cmake_pkg} UPPER_cmake_pkg)
+    set(${cmake_pkg}_LIBRARIES_CACHED ${${cmake_pkg}_LIBRARIES})
+    set(${cmake_pkg}_LIBRARY_CACHED ${${cmake_pkg}_LIBRARY})
+    set(${UPPER_cmake_pkg}_LIBRARIES_CACHED ${${UPPER_cmake_pkg}_LIBRARIES})
+    set(${UPPER_cmake_pkg}_LIBRARY_CACHED ${${UPPER_cmake_pkg}_LIBRARY})
+
     find_package(${VARIABLE} ${ARGN})
+
+    if (NOT ${cmake_pkg}_LIBRARIES)
+        set(${cmake_pkg}_LIBRARIES ${${cmake_pkg}_LIBRARIES_CACHED})
+    endif()
+    if (NOT ${cmake_pkg}_LIBRARY)
+        set(${cmake_pkg}_LIBRARY ${${cmake_pkg}_LIBRARY_CACHED})
+    endif()
+    if (NOT ${UPPER_cmake_pkg}_LIBRARIES)
+        set(${UPPER_cmake_pkg}_LIBRARIES ${${UPPER_cmake_pkg}_LIBRARIES_CACHED})
+    endif()
+    if (NOT ${UPPER_cmake_pkg}_LIBRARY)
+        set(${UPPER_cmake_pkg}_LIBRARY ${${UPPER_cmake_pkg}_LIBRARY_CACHED})
+    endif()
+
     rock_add_plain_dependency(${VARIABLE})
 endmacro()
 
