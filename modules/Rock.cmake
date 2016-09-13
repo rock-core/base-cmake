@@ -287,8 +287,8 @@ macro(rock_target_definition TARGET_NAME)
             set(${TARGET_NAME}_MODE "${ELEMENT}")
         elseif("${ELEMENT}" STREQUAL "NOINSTALL")
             set(${TARGET_NAME}_INSTALL OFF)
-        elseif("${ELEMENT}" STREQUAL "CLANG")
-            set(${TARGET_NAME}_CLANG TRUE)
+        elseif("${ELEMENT}" STREQUAL "LANG_C")
+            set(${TARGET_NAME}_LANG_C TRUE)
         else()
             list(APPEND ${TARGET_NAME}_${${TARGET_NAME}_MODE} "${ELEMENT}")
         endif()
@@ -402,7 +402,7 @@ macro(rock_target_setup TARGET_NAME)
     set_property(TARGET ${TARGET_NAME}
         PROPERTY DEPS_PUBLIC_CMAKE ${${TARGET_NAME}_PUBLIC_CMAKE})
 
-    if (NOT ${TARGET_NAME}_CLANG)
+    if (NOT ${TARGET_NAME}_LANG_C)
         CHECK_CXX_COMPILER_FLAG("-Wnon-virtual-dtor" CXX_SUPPORTS_NON_VIRTUAL_DTOR)
         if (CXX_SUPPORTS_NON_VIRTUAL_DTOR)
             set_target_properties(${TARGET_NAME}
@@ -438,7 +438,7 @@ endmacro()
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [MOC qtsource1.hpp qtsource2.hpp])
 #     [UI qt_window.ui qt_widget.ui]
-#     [CLANG]
+#     [LANG_C]
 #
 # Creates a C++ executable and (optionally) installs it
 #
@@ -463,7 +463,7 @@ endmacro()
 # moc.
 # UI: if the library is Qt-based, a list of ui files (only active if moc files are
 # present)
-# CLANG: use this if the code is written in C
+# LANG_C: use this if the code is written in C
 
 function(rock_executable TARGET_NAME)
     rock_target_definition(${TARGET_NAME} ${ARGN})
@@ -537,7 +537,7 @@ endfunction()
 #     [MOC qtsource1.hpp qtsource2.hpp]
 #     [UI qt_window.ui qt_widget.ui]
 #     [NOINSTALL]
-#     [CLANG])
+#     [LANG_C])
 #
 # Creates and (optionally) installs a shared library.
 #
@@ -565,11 +565,11 @@ endfunction()
 # resulting implementation files are built into the library. If they are source
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
-# UI: if the library is Qt-based, a list of ui files (only active if moc files are 
+# UI: if the library is Qt-based, a list of ui files (only active if moc files are
 # present)
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
-# CLANG: use this if the library is written in C to avoid the use of unsupported
+# LANG_C: use this if the library is written in C to avoid the use of unsupported
 # compiler flags and arguments
 function(rock_library TARGET_NAME)
     rock_library_common(${TARGET_NAME} ${ARGN})
