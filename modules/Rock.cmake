@@ -49,14 +49,27 @@ function(rock_add_compiler_flag_if_it_exists FLAG)
     endif()
 endfunction()
 
+macro(ADD_TARGET_PROPERTIES _target _name _properties)
+    set(_properties ${ARGV})
+    list(REMOVE_AT _properties 0)
+    list(REMOVE_AT _properties 0)
+    get_target_property(_old_properties ${_target} ${_name})
+    if(NOT _old_properties)
+        set(_old_properties)
+    else(NOT _old_properties)
+        set(_old_properties "${_old_properties} ")
+    endif(NOT _old_properties)
+    set_target_properties(${_target} PROPERTIES ${_name} "${_old_properties}${_properties}")
+endmacro(ADD_TARGET_PROPERTIES)
+
 function(rock_add_compiler_flag_to_target_if_it_exists ROCK_TARGET FLAG)
     string(REGEX REPLACE "[^a-zA-Z]"
         "_" VAR_SUFFIX
         "${FLAG}")
     CHECK_CXX_COMPILER_FLAG(${FLAG} CXX_SUPPORTS${VAR_SUFFIX})
     if (CXX_SUPPORTS${VAR_SUFFIX})
-        set_target_properties(${ROCK_TARGET}
-                              PROPERTIES COMPILE_FLAGS ${FLAG})
+        add_target_properties(${ROCK_TARGET}
+                              COMPILE_FLAGS ${FLAG})
     endif()
 endfunction()
 
