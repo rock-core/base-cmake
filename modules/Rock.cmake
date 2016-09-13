@@ -49,6 +49,18 @@ function(rock_add_compiler_flag_if_it_exists FLAG)
     endif()
 endfunction()
 
+function(rock_add_compiler_flag_to_target_if_it_exists ROCK_TARGET FLAG)
+    string(REGEX REPLACE "[^a-zA-Z]"
+        "_" VAR_SUFFIX
+        "${FLAG}")
+    CHECK_CXX_COMPILER_FLAG(${FLAG} CXX_SUPPORTS${VAR_SUFFIX})
+    if (CXX_SUPPORTS${VAR_SUFFIX})
+        set_target_properties(${ROCK_TARGET}
+                              PROPERTIES COMPILE_FLAGS ${FLAG})
+    endif()
+endfunction()
+
+
 ## Main initialization for Rock CMake projects
 macro (rock_init PROJECT_NAME PROJECT_VERSION)
     project(${PROJECT_NAME})
@@ -403,11 +415,7 @@ macro(rock_target_setup TARGET_NAME)
         PROPERTY DEPS_PUBLIC_CMAKE ${${TARGET_NAME}_PUBLIC_CMAKE})
 
     if (NOT ${TARGET_NAME}_LANG_C)
-        CHECK_CXX_COMPILER_FLAG("-Wnon-virtual-dtor" CXX_SUPPORTS_NON_VIRTUAL_DTOR)
-        if (CXX_SUPPORTS_NON_VIRTUAL_DTOR)
-            set_target_properties(${TARGET_NAME}
-                                  PROPERTIES COMPILE_FLAGS "-Wnon-virtual-dtor")
-        endif()
+        rock_add_compiler_flag_to_target_if_it_exists(${TARGET_NAME} "-Wnon-virtual-dtor")
     endif()
 
     foreach (plain_dep ${${TARGET_NAME}_DEPS_PLAIN})
