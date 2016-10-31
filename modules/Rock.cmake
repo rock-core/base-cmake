@@ -11,6 +11,15 @@ macro(rock_activate_cxx11)
     endif()
 endmacro()
 
+macro(rock_support_test_coverage)
+    include(CheckCXXCompilerFlag)
+    option(ROCK_TEST_COVERAGE "turn to ON to build to run the test suite under gcov" OFF)
+    if (ROCK_TEST_COVERAGE)
+        add_compile_options(-fprofile-arcs -ftest-coverage)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov --coverage")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lgcov --coverage")
+    endif()
+endmacro()
 
 macro(rock_use_full_rpath install_rpath)
     # use, i.e. don't skip the full RPATH for the build tree
@@ -87,6 +96,7 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
 
     if (ROCK_TEST_ENABLED)
+        rock_support_test_coverage()
         enable_testing()
     endif()
 endmacro()
