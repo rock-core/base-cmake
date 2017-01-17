@@ -760,8 +760,8 @@ endfunction()
 # passed to moc.
 function(rock_testsuite TARGET_NAME)
     rock_test_common(${TARGET_NAME} ${ARGN})
-    rock_setup_boost_test()
-    rock_add_test()
+    rock_setup_boost_test(${TARGET_NAME})
+    rock_add_test(${TARGET_NAME})
 endfunction()
 
 ## Uses gtest + google-mock as unit testing framework
@@ -792,11 +792,11 @@ function(rock_gtest TARGET_NAME)
                                     ${GMOCK_DIR}/src/gmock-all.cc
                                     ${ARGN})
 
-    rock_setup_gtest_test()
-    rock_add_test()
+    rock_setup_gtest_test(${TARGET_NAME} ${GMOCK_DIR} ${GTEST_DIR})
+    rock_add_test(${TARGET_NAME})
 endfunction()
 
-macro(rock_setup_gtest_test)
+macro(rock_setup_gtest_test TARGET_NAME GMOCK_DIR GTEST_DIR)
     target_include_directories(${TARGET_NAME} SYSTEM PUBLIC ${GMOCK_DIR} ${GTEST_DIR}
                                ${GMOCK_DIR}/include ${GTEST_DIR}/include)
     target_link_libraries(${TARGET_NAME} pthread)
@@ -817,7 +817,7 @@ function(rock_test_common TARGET_NAME)
     rock_executable(${TARGET_NAME} ${ARGN} NOINSTALL)
 endfunction()
 
-macro(rock_setup_boost_test)
+macro(rock_setup_boost_test TARGET_NAME)
     find_package(Boost REQUIRED COMPONENTS unit_test_framework system)
     message(STATUS "boost/test found ... building the test suite")
 
@@ -833,7 +833,7 @@ macro(rock_setup_boost_test)
     endif()
 endmacro()
 
-macro(rock_add_test)
+macro(rock_add_test TARGET_NAME)
     add_test(NAME test-${TARGET_NAME}-cxx
              COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
              ${__rock_test_parameters})
