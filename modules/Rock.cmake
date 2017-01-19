@@ -761,7 +761,7 @@ endfunction()
 function(rock_testsuite TARGET_NAME)
     rock_test_common(${TARGET_NAME} ${ARGN})
     rock_setup_boost_test(${TARGET_NAME})
-    rock_add_test(${TARGET_NAME})
+    rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
 endfunction()
 
 ## Uses gtest + google-mock as unit testing framework
@@ -793,10 +793,10 @@ function(rock_gtest TARGET_NAME)
                                     ${ARGN})
 
     rock_setup_gtest_test(${TARGET_NAME} ${GMOCK_DIR} ${GTEST_DIR})
-    rock_add_test(${TARGET_NAME})
+    rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
 endfunction()
 
-macro(rock_setup_gtest_test TARGET_NAME GMOCK_DIR GTEST_DIR)
+function(rock_setup_gtest_test TARGET_NAME GMOCK_DIR GTEST_DIR)
     target_include_directories(${TARGET_NAME} SYSTEM PUBLIC ${GMOCK_DIR} ${GTEST_DIR}
                                ${GMOCK_DIR}/include ${GTEST_DIR}/include)
     target_link_libraries(${TARGET_NAME} pthread)
@@ -805,8 +805,9 @@ macro(rock_setup_gtest_test TARGET_NAME GMOCK_DIR GTEST_DIR)
         list(APPEND __rock_test_parameters
              --gtest_output=xml:${ROCK_TEST_LOG_DIR}/${TARGET_NAME}.gtest.xml)
         file(MAKE_DIRECTORY "${ROCK_TEST_LOG_DIR}")
+        set(__rock_test_parameters ${__rock_test_parameters} PARENT_SCOPE)
     endif()
-endmacro()
+endfunction()
 
 function(rock_test_common TARGET_NAME)
     if (TARGET_NAME STREQUAL "test")
@@ -817,7 +818,7 @@ function(rock_test_common TARGET_NAME)
     rock_executable(${TARGET_NAME} ${ARGN} NOINSTALL)
 endfunction()
 
-macro(rock_setup_boost_test TARGET_NAME)
+function(rock_setup_boost_test TARGET_NAME)
     find_package(Boost REQUIRED COMPONENTS unit_test_framework system)
     message(STATUS "boost/test found ... building the test suite")
 
@@ -830,14 +831,15 @@ macro(rock_setup_boost_test TARGET_NAME)
              --log_level=all
              --log_sink=${ROCK_TEST_LOG_DIR}/${TARGET_NAME}.boost.xml)
         file(MAKE_DIRECTORY "${ROCK_TEST_LOG_DIR}")
+        set(__rock_test_parameters ${__rock_test_parameters} PARENT_SCOPE)
     endif()
-endmacro()
+endfunction()
 
-macro(rock_add_test TARGET_NAME)
+function(rock_add_test TARGET_NAME __rock_test_parameters)
     add_test(NAME test-${TARGET_NAME}-cxx
              COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
              ${__rock_test_parameters})
-endmacro()
+endfunction()
 
 ## Get the library name from a given path
 #
