@@ -209,7 +209,7 @@ macro(rock_standard_layout)
     endif()
 
     if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/test)
-        option(ROCK_TEST_ENABLED "set to OFF to disable the unit tests. Tests are automatically disabled if the boost unit test framework is not available" ON)
+        option(ROCK_TEST_ENABLED "set to ON to enable the unit tests" OFF)
         if (ROCK_TEST_ENABLED)
             add_subdirectory(test)
         else()
