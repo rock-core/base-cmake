@@ -209,15 +209,9 @@ macro(rock_standard_layout)
     endif()
 
     if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/test)
-        option(ROCK_TEST_ENABLED "set to OFF to disable the unit tests. Tests are automatically disabled if the boost unit test framework is not available" ON)
+        option(ROCK_TEST_ENABLED "set to ON to enable the unit tests" OFF)
         if (ROCK_TEST_ENABLED)
-            find_package(Boost COMPONENTS unit_test_framework system)
-            if (Boost_UNIT_TEST_FRAMEWORK_FOUND)
-                message(STATUS "boost/test found ... building the test suite")
-                add_subdirectory(test)
-            else()
-                message(STATUS "boost/test not found ... NOT building the test suite")
-            endif()
+            add_subdirectory(test)
         else()
             message(STATUS "unit tests disabled as ROCK_TEST_ENABLED is set to OFF")
         endif()
@@ -765,27 +759,86 @@ endfunction()
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
 function(rock_testsuite TARGET_NAME)
+    rock_test_common(${TARGET_NAME} ${ARGN})
+    rock_setup_boost_test(${TARGET_NAME})
+    rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
+endfunction()
+
+## Uses gtest + google-mock as unit testing framework
+# The interface is the same as the one from rock_testsuite
+#
+# Unfortunately, gtest and google-mock do not ship with
+# pre-compiled libraries so we have to add their source files
+# to the test target. If GTEST_DIR or GMOCK_DIR are not set,
+# this function will look for the required source files
+# in /usr/src, which is the default path under ubuntu/debian
+function(rock_gtest TARGET_NAME)
+    if (NOT GTEST_DIR)
+        find_path(GTEST_DIR "src/gtest-all.cc" /usr/src/gtest)
+    endif()
+    if (NOT GMOCK_DIR)
+        find_path(GMOCK_DIR "src/gmock-all.cc" /usr/src/gmock)
+    endif()
+
+    if (NOT GTEST_DIR)
+        message(FATAL_ERROR "Could not find gtest in /usr/src")
+    endif()
+    if (NOT GMOCK_DIR)
+        message(FATAL_ERROR "Could not find google-mock in /usr/src")
+    endif()
+    message(STATUS "gtest found ... building the test suite")
+
+    rock_test_common(${TARGET_NAME} ${GTEST_DIR}/src/gtest-all.cc
+                                    ${GMOCK_DIR}/src/gmock-all.cc
+                                    ${ARGN})
+
+    rock_setup_gtest_test(${TARGET_NAME} ${GMOCK_DIR} ${GTEST_DIR})
+    rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
+endfunction()
+
+function(rock_setup_gtest_test TARGET_NAME GMOCK_DIR GTEST_DIR)
+    target_include_directories(${TARGET_NAME} SYSTEM PUBLIC ${GMOCK_DIR} ${GTEST_DIR}
+                               ${GMOCK_DIR}/include ${GTEST_DIR}/include)
+    target_link_libraries(${TARGET_NAME} pthread)
+
+    if (ROCK_TEST_LOG_DIR)
+        list(APPEND __rock_test_parameters
+             --gtest_output=xml:${ROCK_TEST_LOG_DIR}/${TARGET_NAME}.gtest.xml)
+        file(MAKE_DIRECTORY "${ROCK_TEST_LOG_DIR}")
+        set(__rock_test_parameters ${__rock_test_parameters} PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(rock_test_common TARGET_NAME)
     if (TARGET_NAME STREQUAL "test")
         message(WARNING "test name cannot be 'test', renaming to '${PROJECT_NAME}-test'")
         set(TARGET_NAME "${PROJECT_NAME}-test")
     endif()
+
+    rock_executable(${TARGET_NAME} ${ARGN} NOINSTALL)
+endfunction()
+
+function(rock_setup_boost_test TARGET_NAME)
+    find_package(Boost REQUIRED COMPONENTS unit_test_framework system)
+    message(STATUS "boost/test found ... building the test suite")
+
     add_definitions(-DBOOST_TEST_DYN_LINK)
-    rock_executable(${TARGET_NAME} ${ARGN}
-        NOINSTALL)
     target_link_libraries(${TARGET_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
     if (ROCK_TEST_LOG_DIR)
-        list(APPEND __boost_test_parameters
-            --log_format=xml
-            --log_level=all
-            --log_sink=${ROCK_TEST_LOG_DIR}/${TARGET_NAME}.boost.xml)
+        list(APPEND __rock_test_parameters
+             --log_format=xml
+             --log_level=all
+             --log_sink=${ROCK_TEST_LOG_DIR}/${TARGET_NAME}.boost.xml)
         file(MAKE_DIRECTORY "${ROCK_TEST_LOG_DIR}")
+        set(__rock_test_parameters ${__rock_test_parameters} PARENT_SCOPE)
     endif()
+endfunction()
 
-
+function(rock_add_test TARGET_NAME __rock_test_parameters)
     add_test(NAME test-${TARGET_NAME}-cxx
-        COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
-        ${__boost_test_parameters})
+             COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
+             ${__rock_test_parameters})
 endfunction()
 
 ## Get the library name from a given path
