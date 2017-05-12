@@ -27,8 +27,8 @@
 #
 # Check for how 'gem' should be called
 include(FindPackageHandleStandardArgs)
-find_program(GEM_EXECUTABLE
-    NAMES "gem${RUBY_VERSION_MAJOR}${RUBY_VERSION_MINOR}"
+
+list(APPEND __gem_names "gem${RUBY_VERSION_MAJOR}${RUBY_VERSION_MINOR}"
         "gem${RUBY_VERSION_MAJOR}.${RUBY_VERSION_MINOR}"
         "gem-${RUBY_VERSION_MAJOR}${RUBY_VERSION_MINOR}"
         "gem-${RUBY_VERSION_MAJOR}.${RUBY_VERSION_MINOR}"
@@ -37,6 +37,14 @@ find_program(GEM_EXECUTABLE
         "gem-${RUBY_VERSION_MAJOR}${RUBY_VERSION_MINOR}${RUBY_VERSION_PATCH}"
         "gem-${RUBY_VERSION_MAJOR}.${RUBY_VERSION_MINOR}.${RUBY_VERSION_PATCH}"
         "gem")
+
+if (RUBY_EXECUTABLE)
+    get_filename_component(__ruby_dir "${RUBY_EXECUTABLE}" DIRECTORY)
+    find_program(GEM_EXECUTABLE
+        NAMES ${__gem_names}
+        PATHS "${__ruby_dir}" NO_DEFAULT_PATH)
+endif()
+find_program(GEM_EXECUTABLE NAMES ${__gem_names})
 
 # Making backward compatible
 if(Gem_DEBUG)
