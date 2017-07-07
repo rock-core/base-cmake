@@ -4,7 +4,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/modules/Rock.cmake)
 rock_init(cmake 1.0)
 
 install(FILES
-    modules/FindBoost.cmake
     modules/FindGem.cmake
     modules/FindNumpy.cmake
     modules/FindRuby.cmake
