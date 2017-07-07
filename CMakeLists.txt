@@ -7,7 +7,6 @@ install(FILES
     modules/FindBoost.cmake
     modules/FindGem.cmake
     modules/FindNumpy.cmake
-    modules/FindRuby.cmake
     modules/FindSISL.cmake
     modules/ListMacros.cmake
     modules/PythonBind.cmake
