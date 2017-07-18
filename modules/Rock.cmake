@@ -584,6 +584,24 @@ endfunction()
 # argument is given, this is turned off
 # LANG_C: use this if the library is written in C to avoid the use of unsupported
 # compiler flags and arguments
+#
+# If a pkg-config file named '${TARGET_NAME}.pc.in' exists in the same folder
+# as the target, this file will be automatically generated and installed. The
+# rock_library setup expects this file to follow this template:
+#
+#    prefix=@CMAKE_INSTALL_PREFIX@
+#    exec_prefix=@CMAKE_INSTALL_PREFIX@
+#    libdir=${prefix}/lib
+#    includedir=${prefix}/include
+#    
+#    Name: @TARGET_NAME@
+#    Description: @PROJECT_DESCRIPTION@
+#    Version: @PROJECT_VERSION@
+#    Requires: @PKGCONFIG_REQUIRES@
+#    Libs: -L${libdir} -l@TARGET_NAME@ @PKGCONFIG_LIBS@
+#    Cflags: -I${includedir} @PKGCONFIG_CFLAGS@
+#
+# Within Rock, such a template is installed by the rock-create-lib tool.
 function(rock_library TARGET_NAME)
     rock_library_common(${TARGET_NAME} ${ARGN})
 
