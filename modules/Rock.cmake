@@ -339,7 +339,7 @@ macro(rock_target_definition TARGET_NAME)
     # At this stage, if the user did not set public dependency lists
     # explicitely, pass on everything
     foreach(__depmode PLAIN CMAKE PKGCONFIG)
-        if (NOT ${TARGET_NAME}_PUBLIC_${__depmode})
+        if (NOT DEFINED ${TARGET_NAME}_PUBLIC_${__depmode})
             set(${TARGET_NAME}_PUBLIC_${__depmode} ${${TARGET_NAME}_DEPS_${__depmode}})
         endif()
     endforeach()
@@ -584,6 +584,24 @@ endfunction()
 # argument is given, this is turned off
 # LANG_C: use this if the library is written in C to avoid the use of unsupported
 # compiler flags and arguments
+#
+# If a pkg-config file named '${TARGET_NAME}.pc.in' exists in the same folder
+# as the target, this file will be automatically generated and installed. The
+# rock_library setup expects this file to follow this template:
+#
+#    prefix=@CMAKE_INSTALL_PREFIX@
+#    exec_prefix=@CMAKE_INSTALL_PREFIX@
+#    libdir=${prefix}/lib
+#    includedir=${prefix}/include
+#    
+#    Name: @TARGET_NAME@
+#    Description: @PROJECT_DESCRIPTION@
+#    Version: @PROJECT_VERSION@
+#    Requires: @PKGCONFIG_REQUIRES@
+#    Libs: -L${libdir} -l@TARGET_NAME@ @PKGCONFIG_LIBS@
+#    Cflags: -I${includedir} @PKGCONFIG_CFLAGS@
+#
+# Within Rock, such a template is installed by the rock-create-lib tool.
 function(rock_library TARGET_NAME)
     rock_library_common(${TARGET_NAME} ${ARGN})
 
@@ -918,9 +936,85 @@ macro(rock_add_public_dependencies TARGET_NAME)
         elseif ("${__dep}" STREQUAL "PLAIN")
             set(MODE PLAIN)
         elseif ("${__dep}" STREQUAL "PKGCONFIG")
-            set(MODE PLAIN)
+            set(MODE PKGCONFIG)
         else()
             list(APPEND ${TARGET_NAME}_PUBLIC_${MODE} "${__dep}")
+        endif()
+    endforeach()
+endmacro()
+
+# Restore the default dependency-export mechanism after a call to
+# rock_add_public_dependencies or rock_no_public_dependencies
+#
+# When one does
+#
+#   rock_library(target DEPS_PKGCONFIG dep0 dep1)
+#
+# the dependencies are automatically exported in the pkg-config file. To ensure
+# that no PKGCONFIG dependencies are exported at all, one needs to do
+#
+#   rock_no_public_dependencies(target PKGCONFIG)
+#   rock_library(target DEPS_PKGCONFIG dep0 dep1)
+#
+# and equivalent for PLAIN and CMAKE. If you only want dep0 but not dep1, you
+# would use rock_add_public_dependencies
+#
+#   rock_add_public_dependencies(target PKGCONFIG dep0)
+#   rock_library(target DEPS_PKGCONFIG dep0 dep1)
+#
+# Finally, if you want to reset the default behaviour after a call to
+# rock_add_public_dependencies or rock_no_public_dependencies, do
+#
+#   rock_make_all_dependencies_public(target PKGCONFIG)
+#
+macro(rock_make_all_dependencies_public TARGET_NAME)
+    foreach(__dep ${ARGN})
+        if ("${__dep}" STREQUAL "CMAKE")
+            unset(${TARGET_NAME}_PUBLIC_CMAKE)
+        elseif ("${__dep}" STREQUAL "PLAIN")
+            unset(${TARGET_NAME}_PUBLIC_PLAIN)
+        elseif ("${__dep}" STREQUAL "PKGCONFIG")
+            unset(${TARGET_NAME}_PUBLIC_PKGCONFIG)
+        else()
+            message(FATAL_ERROR "unknown mode ${__dep} in rock_no_public_dependencies")
+        endif()
+    endforeach()
+endmacro()
+
+# Ensure that no dependencies of a certain type are exported in the pkg-config
+# file
+#
+# When one does
+#
+#   rock_library(target DEPS_PKGCONFIG dep0 dep1)
+#
+# the dependencies are automatically exported in the pkg-config file. To ensure
+# that no PKGCONFIG dependencies are exported at all, one needs to do
+#
+#   rock_no_public_dependencies(target PKGCONFIG)
+#   rock_library(target DEPS_PKGCONFIG dep0 dep1)
+#
+# and equivalent for PLAIN and CMAKE. If you only want dep0 but not dep1, you
+# would use rock_add_public_dependencies
+#
+#   rock_add_public_dependencies(target PKGCONFIG dep0)
+#   rock_library(target DEPS_PKGCONFIG dep0 dep1)
+#
+# Finally, if you want to reset the default behaviour after a call to
+# rock_add_public_dependencies or rock_no_public_dependencies, do
+#
+#   rock_make_all_dependencies_public(target PKGCONFIG)
+#
+macro(rock_no_public_dependencies TARGET_NAME)
+    foreach(__dep ${ARGN})
+        if ("${__dep}" STREQUAL "CMAKE")
+            set(${TARGET_NAME}_PUBLIC_CMAKE "")
+        elseif ("${__dep}" STREQUAL "PLAIN")
+            set(${TARGET_NAME}_PUBLIC_PLAIN "")
+        elseif ("${__dep}" STREQUAL "PKGCONFIG")
+            set(${TARGET_NAME}_PUBLIC_PKGCONFIG "")
+        else()
+            message(FATAL_ERROR "unknown mode ${__dep} in rock_no_public_dependencies")
         endif()
     endforeach()
 endmacro()
