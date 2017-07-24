@@ -536,10 +536,10 @@ function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
 
     if (DEFINED ROCK_PUBLIC_CXX_STANDARD)
         set(cxx_standard ${ROCK_PUBLIC_CXX_STANDARD})
-    elseif (CMAKE_VERSION VERSION_LESS "3.1")
-        set(cxx_standard ${CMAKE_CXX_STANDARD})
-    else()
+    elseif (TARGET ${TARGET_NAME} AND NOT CMAKE_VERSION VERSION_LESS "3.1")
         get_property(cxx_standard TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD)
+    else()
+        set(cxx_standard ${CMAKE_CXX_STANDARD})
     endif()
 
     if (cxx_standard)
