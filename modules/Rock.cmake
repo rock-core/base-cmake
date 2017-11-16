@@ -120,7 +120,7 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     rock_add_compiler_flag_if_it_exists(-Wall)
     rock_add_compiler_flag_if_it_exists(-Wno-unused-local-typedefs)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
-
+    add_definitions(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
     if (ROCK_TEST_ENABLED)
         enable_testing()
     endif()
