@@ -892,7 +892,7 @@ function(rock_setup_boost_test TARGET_NAME)
 
     if (ROCK_TEST_LOG_DIR)
         list(APPEND __rock_test_parameters
-             --log_format=xml
+             --log_format=XML
              --log_level=all
              --log_sink=${ROCK_TEST_LOG_DIR}/${TARGET_NAME}.boost.xml)
         file(MAKE_DIRECTORY "${ROCK_TEST_LOG_DIR}")
