@@ -562,12 +562,22 @@ endfunction()
 ## Common setup for libraries in Rock. Used by rock_library and
 # rock_vizkit_plugin
 macro(rock_library_common TARGET_NAME)
-    rock_target_definition(${TARGET_NAME} ${ARGN})
+    set(__argn "${ARGN}") # turn ARGN into a list
+    set(__valid_library_modes SHARED MODULE STATIC)
+    list(GET __argn 0 __library_mode)
+    list(FIND __valid_library_modes "${LIBRARY_MODE}" __library_mode_valid)
+    if (__library_mode_valid EQUAL -1)
+        set(LIBRARY_MODE SHARED)
+    else()
+        list(REMOVE_AT __argn 0)
+    endif()
+
+    rock_target_definition(${TARGET_NAME} ${__argn})
     # Skip the add_library part if the only thing the caller wants is to install
     # headers
     list(LENGTH ${TARGET_NAME}_SOURCES __source_list_size)
     if (__source_list_size)
-        add_library(${TARGET_NAME} SHARED ${${TARGET_NAME}_SOURCES})
+        add_library(${TARGET_NAME} ${LIBRARY_MODE} ${${TARGET_NAME}_SOURCES})
         rock_target_setup(${TARGET_NAME})
         set(${TARGET_NAME}_LIBRARY_HAS_TARGET TRUE)
     endif()
