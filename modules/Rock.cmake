@@ -890,9 +890,10 @@ function(rock_setup_boost_test TARGET_NAME)
     add_definitions(-DBOOST_TEST_DYN_LINK)
     target_link_libraries(${TARGET_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
+    option(ROCK_TEST_BOOST_FORMAT "the output format for Boost.Test suites" XML)
     if (ROCK_TEST_LOG_DIR)
         list(APPEND __rock_test_parameters
-             --log_format=XML
+             --log_format=${ROCK_TEST_BOOST_FORMAT}
              --log_level=all
              --log_sink=${ROCK_TEST_LOG_DIR}/${TARGET_NAME}.boost.xml)
         file(MAKE_DIRECTORY "${ROCK_TEST_LOG_DIR}")
