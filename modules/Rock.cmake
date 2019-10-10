@@ -126,12 +126,21 @@ macro (rock_init PROJECT_NAME PROJECT_VERSION)
     endif()
 endmacro()
 
+macro(rock_exported_includedir_root VAR DIR TARGET_DIR)
+    if("${ARGC}" EQUAL 4)
+        set(TARGET_INCLUDE_DIR ${ARGV3})
+    else()
+        string(REGEX REPLACE / "-" TARGET_INCLUDE_DIR ${TARGET_DIR})
+    endif()
+
+    set(${VAR} ${PROJECT_BINARY_DIR}/include/_${TARGET_INCLUDE_DIR}_)
+endmacro()
+
 # Allow for a global include dir schema by creating symlinks into the source directory
 # Manipulation of the source directory is prevented using individual export
 # directories (e.g. to prevent creating files within already symlinked directories)
 function(rock_export_includedir DIR TARGET_DIR)
-    string(REGEX REPLACE / "-" TARGET_INCLUDE_DIR ${TARGET_DIR})
-    set(_ROCK_ADD_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/_${TARGET_INCLUDE_DIR}_)
+    rock_exported_includedir_root(_ROCK_ADD_INCLUDE_DIR ${ARGV})
     set(_ROCK_EXPORT_INCLUDE_DIR ${_ROCK_ADD_INCLUDE_DIR}/${TARGET_DIR})
     if(NOT EXISTS ${_ROCK_EXPORT_INCLUDE_DIR})
         # Get the subdir of the export path
@@ -330,18 +339,21 @@ endmacro()
 ## Common parsing of parameters for all the C/C++ target types
 macro(rock_target_definition TARGET_NAME)
     set(${TARGET_NAME}_INSTALL ON)
+    set(${TARGET_NAME}_USE_BINARY_DIR OFF)
     set(ROCK_TARGET_AVAILABLE_MODES "SOURCES;HEADERS;DEPS;DEPS_PKGCONFIG;DEPS_CMAKE;DEPS_PLAIN;MOC;UI;LIBS")
 
     set(${TARGET_NAME}_MODE "SOURCES")
     foreach(ELEMENT ${ARGN})
         list(FIND ROCK_TARGET_AVAILABLE_MODES "${ELEMENT}" IS_KNOWN_MODE)
-        if ("${ELEMENT}" STREQUAL "LIBS")
+        if (ELEMENT STREQUAL "USE_BINARY_DIR")
+            set(${TARGET_NAME}_USE_BINARY_DIR ON)
+        elseif (ELEMENT STREQUAL "LIBS")
             set(${TARGET_NAME}_MODE DEPENDENT_LIBS)
         elseif (IS_KNOWN_MODE GREATER -1)
             set(${TARGET_NAME}_MODE "${ELEMENT}")
-        elseif("${ELEMENT}" STREQUAL "NOINSTALL")
+        elseif(ELEMENT STREQUAL "NOINSTALL")
             set(${TARGET_NAME}_INSTALL OFF)
-        elseif("${ELEMENT}" STREQUAL "LANG_C")
+        elseif(ELEMENT STREQUAL "LANG_C")
             set(${TARGET_NAME}_LANG_C TRUE)
         else()
             list(APPEND ${TARGET_NAME}_${${TARGET_NAME}_MODE} "${ELEMENT}")
@@ -456,6 +468,10 @@ macro(rock_target_setup TARGET_NAME)
     set_property(TARGET ${TARGET_NAME}
         PROPERTY DEPS_PUBLIC_CMAKE ${${TARGET_NAME}_PUBLIC_CMAKE})
 
+    if (${TARGET_NAME}_USE_BINARY_DIR)
+        rock_target_use_binary_dir(${TARGET_NAME})
+    endif()
+
     if (NOT ${TARGET_NAME}_LANG_C)
         rock_add_compiler_flag_to_target_if_it_exists(${TARGET_NAME} "-Wnon-virtual-dtor")
     endif()
@@ -470,6 +486,10 @@ macro(rock_target_setup TARGET_NAME)
     foreach (imported_dep ${${TARGET_NAME}_IMPORTED_DEPS})
         target_link_libraries(${TARGET_NAME} ${${imported_dep}_LIBRARIES})
     endforeach()
+    foreach (internal_dep ${${TARGET_NAME}_DEPS})
+        get_target_property(internal_dep_includes ${internal_dep} INCLUDE_DIRECTORIES)
+        target_include_directories(${TARGET_NAME} BEFORE PUBLIC ${internal_dep_includes})
+    endforeach()
     target_link_libraries(${TARGET_NAME} ${${TARGET_NAME}_DEPS})
     target_link_libraries(${TARGET_NAME} ${${TARGET_NAME}_DEPENDENT_LIBS})
     foreach (cmake_pkg ${${TARGET_NAME}_DEPS_CMAKE})
@@ -483,6 +503,7 @@ endmacro()
 #
 # rock_executable(name
 #     SOURCES source.cpp source1.cpp ...
+#     [USE_BINARY_DIR]
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
@@ -498,6 +519,8 @@ endmacro()
 #
 # The following optional arguments are available:
 #
+# USE_BINARY_DIR: whether the target needs to access headers from its binary dir,
+# as e.g. if some code-generated files are used.
 # DEPS: lists the other targets from this CMake project against which the
 # library should be linked
 # DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
@@ -592,6 +615,7 @@ endfunction()
 #
 # rock_library(name
 #     SOURCES source.cpp source1.cpp ...
+#     [USE_BINARY_DIR]
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
@@ -613,6 +637,8 @@ endfunction()
 #
 # The following optional arguments are available:
 #
+# USE_BINARY_DIR: whether the target needs to access headers from its binary dir,
+# as e.g. if some code-generated files are used.
 # DEPS: lists the other targets from this CMake project against which the
 # library should be linked
 # DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
@@ -1067,4 +1093,17 @@ macro(rock_no_public_dependencies TARGET_NAME)
             message(FATAL_ERROR "unknown mode ${__dep} in rock_no_public_dependencies")
         endif()
     endforeach()
+endmacro()
+
+# Tell the target definitions to assume that code (headers and sources) is
+# present in this folder's binary directory
+#
+# This happens most often when using code generation and/or configuration files
+macro(rock_target_use_binary_dir TARGET)
+    rock_export_includedir(${CMAKE_CURRENT_BINARY_DIR}
+                           ${PROJECT_NAME} ${PROJECT_NAME}_bin)
+    rock_exported_includedir_root(__includedir_root ${CMAKE_CURRENT_BINARY_DIR}
+                                  ${PROJECT_NAME}_bin)
+    target_include_directories(${TARGET} BEFORE PRIVATE ${__includedir_root})
+    target_include_directories(${TARGET} BEFORE PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endmacro()
