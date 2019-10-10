@@ -130,7 +130,12 @@ endmacro()
 # Manipulation of the source directory is prevented using individual export
 # directories (e.g. to prevent creating files within already symlinked directories)
 function(rock_export_includedir DIR TARGET_DIR)
-    string(REGEX REPLACE / "-" TARGET_INCLUDE_DIR ${TARGET_DIR})
+    if(ARGC EQUAL 3)
+        set(TARGET_INCLUDE_DIR ${ARGV2})
+    else()
+        string(REGEX REPLACE / "-" TARGET_INCLUDE_DIR ${TARGET_DIR})
+    endif()
+
     set(_ROCK_ADD_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/_${TARGET_INCLUDE_DIR}_)
     set(_ROCK_EXPORT_INCLUDE_DIR ${_ROCK_ADD_INCLUDE_DIR}/${TARGET_DIR})
     if(NOT EXISTS ${_ROCK_EXPORT_INCLUDE_DIR})
