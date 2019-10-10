@@ -22,7 +22,7 @@
 #   set(CMAKE_CXX_STANDARD 11)
 #   set(ROCK_PUBLIC_CXX_STANDARD 98)
 #   set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# 
+#
 # Will build the package using C++11 but export -std=c++98 in the pkg-config
 # file. Set the variable to empty to avoid exporting any -std flag in the
 # pkgconfig file, e.g.:
@@ -53,7 +53,7 @@ macro(rock_use_full_rpath install_rpath)
 
     # when building, don't use the install RPATH already
     # (but later on when installing)
-    SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+    SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
     # the RPATH to be used when installing
     SET(CMAKE_INSTALL_RPATH ${install_rpath})
@@ -134,22 +134,24 @@ function(rock_export_includedir DIR TARGET_DIR)
     set(_ROCK_ADD_INCLUDE_DIR ${PROJECT_BINARY_DIR}/include/_${TARGET_INCLUDE_DIR}_)
     set(_ROCK_EXPORT_INCLUDE_DIR ${_ROCK_ADD_INCLUDE_DIR}/${TARGET_DIR})
     if(NOT EXISTS ${_ROCK_EXPORT_INCLUDE_DIR})
-        #get the subdir of the export path
+        # Get the subdir of the export path
         get_filename_component(_ROCK_EXPORT_INCLUDE_SUBDIR ${_ROCK_EXPORT_INCLUDE_DIR} PATH)
 
         # Making sure we create all required parent directories
         file(MAKE_DIRECTORY ${_ROCK_EXPORT_INCLUDE_SUBDIR})
-	if (WIN32)
-		execute_process(COMMAND cmake -E copy_directory ${DIR} ${_ROCK_EXPORT_INCLUDE_DIR})
-	else(WIN32)
-		execute_process(COMMAND cmake -E create_symlink ${DIR} ${_ROCK_EXPORT_INCLUDE_DIR})
-	endif(WIN32)
+        if(WIN32)
+            execute_process(COMMAND cmake -E copy_directory ${DIR} ${_ROCK_EXPORT_INCLUDE_DIR})
+        else()
+            execute_process(COMMAND cmake -E create_symlink ${DIR} ${_ROCK_EXPORT_INCLUDE_DIR})
+        endif()
+
         if(NOT EXISTS ${_ROCK_EXPORT_INCLUDE_DIR})
             message(FATAL_ERROR "Export include dir '${DIR}' to '${_ROCK_EXPORT_INCLUDE_DIR}' failed")
         endif()
     else()
         message(STATUS "Export include dir: '${_ROCK_EXPORT_INCLUDE_DIR}' already exists")
     endif()
+
     include_directories(BEFORE ${_ROCK_ADD_INCLUDE_DIR})
 endfunction()
 
@@ -157,8 +159,7 @@ function(rock_add_source_dir DIR TARGET_DIR)
     if(IS_ABSOLUTE ${DIR})
         rock_export_includedir(${DIR} ${TARGET_DIR})
     else()
-        rock_export_includedir(${CMAKE_CURRENT_SOURCE_DIR}/${DIR}
-        ${TARGET_DIR})
+        rock_export_includedir(${CMAKE_CURRENT_SOURCE_DIR}/${DIR} ${TARGET_DIR})
     endif()
     add_subdirectory(${DIR})
 endfunction()
@@ -238,9 +239,10 @@ macro(rock_standard_layout)
     endif()
 
     if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/configuration)
-	install(DIRECTORY ${PROJECT_SOURCE_DIR}/configuration/ DESTINATION configuration/${PROJECT_NAME}
-	        FILES_MATCHING PATTERN "*" 
-	                       PATTERN "*.pc" EXCLUDE)
+        install(DIRECTORY ${PROJECT_SOURCE_DIR}/configuration/
+                DESTINATION configuration/${PROJECT_NAME}
+                FILES_MATCHING PATTERN "*"
+                               PATTERN "*.pc" EXCLUDE)
     endif()
 
     if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/test)
@@ -306,7 +308,7 @@ macro (rock_add_plain_dependency VARIABLE)
     link_directories(${${VARIABLE}_LIBRARY_DIRS})
 endmacro()
 
-macro (rock_find_qt4) 
+macro (rock_find_qt4)
     set(__arglist "${ARGN}")
     list(GET 0 arglist __arg_optreq)
     if ((__arg_optreq EQUAL "OPTIONAL") OR (__arg_optreq EQUAL "REQUIRED"))
@@ -360,7 +362,7 @@ macro(rock_target_definition TARGET_NAME)
             endif()
         endforeach()
     endforeach()
-    
+
     foreach (plain_pkg ${${TARGET_NAME}_DEPS_PLAIN} ${${TARGET_NAME}_PUBLIC_PLAIN})
         rock_add_plain_dependency(${plain_pkg})
     endforeach()
@@ -403,7 +405,7 @@ macro(rock_target_definition TARGET_NAME)
             rock_find_qt4(REQUIRED)
         endif()
 
-        list(APPEND ${TARGET_NAME}_DEPENDENT_LIBS ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY}) 
+        list(APPEND ${TARGET_NAME}_DEPENDENT_LIBS ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
 
         set(__${TARGET_NAME}_MOC "${${TARGET_NAME}_MOC}")
         set(${TARGET_NAME}_MOC "")
@@ -431,7 +433,7 @@ macro(rock_target_definition TARGET_NAME)
             endif()
             list(APPEND ${TARGET_NAME}_MOC ${__moced_file})
         endforeach()
-         
+
         QT4_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC})
         list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_MOC_SRCS})
     endif()
@@ -604,7 +606,7 @@ endfunction()
 # As with all rock libraries, the target must have a pkg-config file along, that
 # gets generated and (optionally) installed by the macro. The pkg-config file
 # needs to be in the same directory and called <name>.pc.in
-# 
+#
 # The following arguments are mandatory:
 #
 # SOURCES: list of the C++ sources that should be built into that library
@@ -640,7 +642,7 @@ endfunction()
 #    exec_prefix=@CMAKE_INSTALL_PREFIX@
 #    libdir=${prefix}/lib
 #    includedir=${prefix}/include
-#    
+#
 #    Name: @TARGET_NAME@
 #    Description: @PROJECT_DESCRIPTION@
 #    Version: @PROJECT_VERSION@
@@ -687,7 +689,7 @@ endfunction()
 # The library gets linked against the vizkit3d libraries automatically (no
 # need to list them in DEPS_PKGCONFIG). Moreoer, unlike with a normal shared
 # library, the headers get installed in include/vizkit3d
-# 
+#
 # The following arguments are mandatory:
 #
 # SOURCES: list of the C++ sources that should be built into that library
@@ -750,11 +752,11 @@ endfunction()
 # installed in share/vizkit/ext, where vizkit is looking for it. if a file
 # called vizkit_widget.rb exists it will be renamed and installed to
 # lib/qt/designer/cplusplus_extensions/<project_name>_vizkit.rb
-# 
+#
 # List all libraries to link to in the DEPS_PKGCONFIG, including Qt-libraries
 # like QtCore. Unlike with a normal shared library, the headers get installed
 # in include/<project_name>
-# 
+#
 # The following arguments are mandatory:
 #
 # SOURCES: list of the C++ sources that should be built into that library
@@ -1066,4 +1068,3 @@ macro(rock_no_public_dependencies TARGET_NAME)
         endif()
     endforeach()
 endmacro()
-
