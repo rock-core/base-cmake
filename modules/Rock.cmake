@@ -918,7 +918,7 @@ function(rock_setup_boost_test TARGET_NAME)
     add_definitions(-DBOOST_TEST_DYN_LINK)
     target_link_libraries(${TARGET_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
-    option(ROCK_TEST_BOOST_FORMAT "the output format for Boost.Test suites" XML)
+    set(ROCK_TEST_BOOST_FORMAT XML CACHE STRING "the output format for Boost.Test suites")
     if (ROCK_TEST_LOG_DIR)
         list(APPEND __rock_test_parameters
              --log_format=${ROCK_TEST_BOOST_FORMAT}
