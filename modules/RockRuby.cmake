@@ -107,6 +107,7 @@ function(rock_add_ruby_package NAME)
         rock_ruby_library(${NAME} ${pure_ruby_files})
 
         if (ROCK_TEST_ENABLED AND IS_DIRECTORY test)
+            enable_testing()
             rock_ruby_test(${NAME})
         endif()
 
@@ -251,9 +252,22 @@ else()
             set(test_requires "${test_requires}require '${test_file}';")
         endforeach()
 
+        if (ROCK_TEST_LOG_DIR)
+            file(MAKE_DIRECTORY ${ROCK_TEST_LOG_DIR})
+            list(APPEND __minitest_args
+                --junit
+                --junit-filename=${ROCK_TEST_LOG_DIR}/report.junit.xml
+                --junit-jenkins
+            )
+        endif()
+
         add_test(NAME test-${TARGET}-ruby
             WORKING_DIRECTORY "${workdir}"
-            COMMAND ${RUBY_EXECUTABLE} -rminitest/autorun -I${CMAKE_CURRENT_SOURCE_DIR}/lib -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -e "${test_requires}")
+            COMMAND ${RUBY_EXECUTABLE} -rminitest/autorun -I${CMAKE_CURRENT_SOURCE_DIR}/lib 
+                    -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -e "${test_requires}"
+                    --
+                    ${__minitest_args}
+        )
     endfunction()
 endif()
 
