@@ -247,6 +247,15 @@ macro(rock_standard_layout)
         endif()
     endif()
 
+    if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/bindings/python)
+        if (EXISTS ${PROJECT_SOURCE_DIR}/bindings/python/CMakeLists.txt)
+            option(BINDINGS_PYTHON "install this package's Python bindings" ON)
+            if(BINDINGS_PYTHON)
+                add_subdirectory(bindings/python)
+            endif()
+        endif()
+    endif()
+
     if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/configuration)
         install(DIRECTORY ${PROJECT_SOURCE_DIR}/configuration/
                 DESTINATION configuration/${PROJECT_NAME}
