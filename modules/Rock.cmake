@@ -108,9 +108,17 @@ endfunction()
 
 
 ## Main initialization for Rock CMake projects
-macro (rock_init PROJECT_NAME PROJECT_VERSION)
-    project(${PROJECT_NAME})
-    set(PROJECT_VERSION ${PROJECT_VERSION})
+macro (rock_init)
+    if (${ARGC} GREATER 0)
+        message(WARNING "Passing project name and version to rock_init was a misfeature \
+of Rock's macros since CMake 3.0. You must call CMake's project() \
+at toplevel, like this:\
+\nproject(${ARGV0} VERSION ${ARGV1} DESCRIPTION \"project description\")\
+\nRemove the arguments to rock_init() to silence this warning")
+        project(${ARGV0})
+        set(PROJECT_VERSION ${ARGV1})
+    endif()
+
     rock_use_full_rpath("${CMAKE_INSTALL_PREFIX}/lib")
     include(CheckCXXCompilerFlag)
     include(FindPkgConfig)
