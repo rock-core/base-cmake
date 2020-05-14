@@ -357,7 +357,7 @@ endmacro()
 macro(rock_target_definition TARGET_NAME)
     set(${TARGET_NAME}_INSTALL ON)
     set(${TARGET_NAME}_USE_BINARY_DIR OFF)
-    set(ROCK_TARGET_AVAILABLE_MODES "SOURCES;HEADERS;DEPS;DEPS_PKGCONFIG;DEPS_CMAKE;DEPS_PLAIN;MOC;UI;LIBS")
+    set(ROCK_TARGET_AVAILABLE_MODES "SOURCES;HEADERS;DEPS;DEPS_PKGCONFIG;DEPS_CMAKE;DEPS_PLAIN;DEPS_TARGET;MOC;UI;LIBS")
 
     set(${TARGET_NAME}_MODE "SOURCES")
     foreach(ELEMENT ${ARGN})
@@ -378,7 +378,7 @@ macro(rock_target_definition TARGET_NAME)
     endforeach()
 
     foreach (internal_dep ${${TARGET_NAME}_DEPS})
-        foreach(dep_mode PLAIN CMAKE PKGCONFIG)
+        foreach(dep_mode PLAIN CMAKE PKGCONFIG TARGET)
             get_property(internal_dep_DEPS TARGET ${internal_dep}
                 PROPERTY DEPS_PUBLIC_${dep_mode})
 
@@ -404,7 +404,7 @@ macro(rock_target_definition TARGET_NAME)
 
     # At this stage, if the user did not set public dependency lists
     # explicitely, pass on everything
-    foreach(__depmode PLAIN CMAKE PKGCONFIG)
+    foreach(__depmode PLAIN CMAKE PKGCONFIG TARGET)
         if (NOT DEFINED ${TARGET_NAME}_PUBLIC_${__depmode})
             set(${TARGET_NAME}_PUBLIC_${__depmode} ${${TARGET_NAME}_DEPS_${__depmode}})
         endif()
@@ -424,6 +424,19 @@ macro(rock_target_definition TARGET_NAME)
                 set(${TARGET_NAME}_PKGCONFIG_CFLAGS
                     "${${TARGET_NAME}_PKGCONFIG_CFLAGS} -I${__dep_incdir}")
             endforeach()
+        endforeach()
+    endforeach()
+
+    foreach(__dep ${${TARGET_NAME}_PUBLIC_TARGET})
+        get_property(__dep_libraries TARGET ${__dep} PROPERTY LOCATION)
+        rock_libraries_for_pkgconfig(${TARGET_NAME}_PKGCONFIG_LIBS
+            ${__dep_libraries})
+
+        get_property(__dep_include_dirs TARGET ${__dep} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+        foreach(__dep_incdir ${__dep_include_dirs})
+            set(${TARGET_NAME}_PKGCONFIG_CFLAGS
+                "${${TARGET_NAME}_PKGCONFIG_CFLAGS} -I${__dep_incdir}")
+            message(STATUS ${__dep_incdir})
         endforeach()
     endforeach()
 
@@ -500,6 +513,9 @@ macro(rock_target_setup TARGET_NAME)
     foreach (pkgconfig_pkg ${${TARGET_NAME}_DEPS_PKGCONFIG})
         target_link_libraries(${TARGET_NAME} ${${pkgconfig_pkg}_PKGCONFIG_LIBRARIES})
     endforeach()
+    foreach (__cmake_target ${${TARGET_NAME}_DEPS_TARGET})
+        target_link_libraries(${TARGET_NAME} ${__cmake_target})
+    endforeach()
     foreach (imported_dep ${${TARGET_NAME}_IMPORTED_DEPS})
         target_link_libraries(${TARGET_NAME} ${${imported_dep}_LIBRARIES})
     endforeach()
@@ -525,6 +541,7 @@ endmacro()
 #     [USE_BINARY_DIR]
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
+#     [DEPS_TARGET target1 target2 target3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [MOC qtsource1.hpp qtsource2.hpp])
 #     [UI qt_window.ui qt_widget.ui]
@@ -544,8 +561,11 @@ endmacro()
 # library should be linked
 # DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
 # necessary link and compilation flags are added
+# DEPS_TARGET: lists the CMake imported targets which should be used for this
+# target. The targets must have been found already using e.g. `find_package`
 # DEPS_CMAKE: list of packages which can be found with CMake's find_package,
-# that the library depends upon. It is assumed that the Find*.cmake scripts
+# that the library depends upon using old-style variable passing. Use
+# DEPS_TARGET for imported targets. It is assumed that the Find*.cmake scripts
 # follow the cmake accepted standard for variable naming
 # MOC: if the library is Qt-based, this is a list of either source or header
 # files of classes that need to be passed through Qt's moc compiler.  If headers
@@ -637,6 +657,7 @@ endfunction()
 #     [USE_BINARY_DIR]
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
+#     [DEPS_TARGET target1 target2 target3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [HEADERS header1.hpp header2.hpp header3.hpp ...]
 #     [MOC qtsource1.hpp qtsource2.hpp]
@@ -662,6 +683,8 @@ endfunction()
 # library should be linked
 # DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
 # necessary link and compilation flags are added
+# DEPS_TARGET: lists the CMake imported targets which should be used for this
+# target. The targets must have been found already using e.g. `find_package`
 # DEPS_CMAKE: list of packages which can be found with CMake's find_package,
 # that the library depends upon. It is assumed that the Find*.cmake scripts
 # follow the cmake accepted standard for variable naming
@@ -722,6 +745,7 @@ endfunction()
 #     SOURCES source.cpp source1.cpp ...
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
+#     [DEPS_TARGET target1 target2 target3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [HEADERS header1.hpp header2.hpp header3.hpp ...]
 #     [MOC qtsource1.hpp qtsource2.hpp]
@@ -745,6 +769,8 @@ endfunction()
 # library should be linked
 # DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
 # necessary link and compilation flags are added
+# DEPS_TARGET: lists the CMake imported targets which should be used for this
+# target. The targets must have been found already using e.g. `find_package`
 # DEPS_CMAKE: list of packages which can be found with CMake's find_package,
 # that the library depends upon. It is assumed that the Find*.cmake scripts
 # follow the cmake accepted standard for variable naming
@@ -783,6 +809,7 @@ endfunction()
 #     SOURCES source.cpp source1.cpp ...
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
+#     [DEPS_TARGET target1 target2 target3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [HEADERS header1.hpp header2.hpp header3.hpp ...]
 #     [MOC qtsource1.hpp qtsource2.hpp]
@@ -817,6 +844,8 @@ endfunction()
 # library should be linked
 # DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
 # necessary link and compilation flags are added
+# DEPS_TARGET: lists the CMake imported targets which should be used for this
+# target. The targets must have been found already using e.g. `find_package`
 # DEPS_CMAKE: list of packages which can be found with CMake's find_package,
 # that the library depends upon. It is assumed that the Find*.cmake scripts
 # follow the cmake accepted standard for variable naming
@@ -847,6 +876,7 @@ endfunction()
 #     SOURCES source.cpp source1.cpp ...
 #     [DEPS target1 target2 target3]
 #     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
+#     [DEPS_TARGET target1 target2 target3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [MOC qtsource1.hpp qtsource2.hpp])
 #
@@ -862,6 +892,8 @@ endfunction()
 # library should be linked
 # DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
 # necessary link and compilation flags are added
+# DEPS_TARGET: lists the CMake imported targets which should be used for this
+# target. The targets must have been found already using e.g. `find_package`
 # DEPS_CMAKE: list of packages which can be found with CMake's find_package,
 # that the library depends upon. It is assumed that the Find*.cmake scripts
 # follow the cmake accepted standard for variable naming
