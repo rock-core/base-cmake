@@ -15,6 +15,7 @@ install(FILES
     modules/PythonInstallPath.cmake
     modules/Rock.cmake
     modules/RockRuby.cmake
+    modules/RockAutodetectOpenCV.cmake
     modules/rock-config.cmake
     DESTINATION share/rock/cmake)
 

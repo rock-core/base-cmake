@@ -1,0 +1,15 @@
+function(rock_autodetect_opencv VARIABLE)
+    if (${${VARIABLE}})
+        return()
+    endif()
+
+    foreach(__opencv_candidate opencv opencv4)
+        pkg_check_modules(__autodetect_opencv ${__opencv_candidate})
+        if (__autodetect_opencv_FOUND)
+            set(${VARIABLE} ${__opencv_candidate} CACHE STRING
+                "The pkg-config package that should be resolved for OpenCV. Default is to auto-detect")
+            return()
+        endif()
+    endforeach()
+    message(FATAL_ERROR "failed to autodetect OpenCV version")
+endfunction()
