@@ -334,25 +334,6 @@ macro (rock_add_plain_dependency VARIABLE)
     link_directories(${${VARIABLE}_LIBRARY_DIRS})
 endmacro()
 
-macro (rock_find_qt4)
-    set(__arglist "${ARGN}")
-    list(GET 0 arglist __arg_optreq)
-    if ((__arg_optreq EQUAL "OPTIONAL") OR (__arg_optreq EQUAL "REQUIRED"))
-        list(REMOVE_AT __arglist 0)
-    else()
-        set(__arg_optreq REQUIRED)
-    endif()
-
-    find_package(Qt4 ${__arg_optreq} COMPONENTS QtCore QtGui QtOpenGl ${arglist})
-    include_directories(${QT_HEADERS_DIR})
-    foreach(__qtmodule__ QtCore QtGui QtOpenGl ${ARGN})
-        string(TOUPPER ${__qtmodule__} __qtmodule__)
-        add_definitions(${QT_${__qtmodule__}_DEFINITIONS})
-        include_directories(${QT_${__qtmodule__}_INCLUDE_DIR})
-        link_directories(${QT_${__qtmodule__}_LIBRARY_DIR})
-    endforeach()
-endmacro()
-
 ## Common parsing of parameters for all the C/C++ target types
 macro(rock_target_definition TARGET_NAME)
     set(${TARGET_NAME}_INSTALL ON)
@@ -1158,3 +1139,64 @@ macro(rock_target_use_binary_dir TARGET)
     target_include_directories(${TARGET} BEFORE PRIVATE ${__includedir_root})
     target_include_directories(${TARGET} BEFORE PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endmacro()
+
+# Find Qt4 libraries
+#
+# The macro finds QtCore, QtGui and QtOpenGL by default. Additional arguments
+# can be given to find more components.
+#
+# Found include and library paths are added to the current directory. The
+# relevant modules must be added to other targets with `DEPS_CMAKE Qt4`
+macro (rock_find_qt4)
+    set(__arglist "${ARGN}")
+    list(GET 0 arglist __arg_optreq)
+    if ((__arg_optreq EQUAL "OPTIONAL") OR (__arg_optreq EQUAL "REQUIRED"))
+        list(REMOVE_AT __arglist 0)
+    else()
+        set(__arg_optreq REQUIRED)
+    endif()
+
+    find_package(Qt4 ${__arg_optreq} COMPONENTS QtCore QtGui QtOpenGl ${arglist})
+    include_directories(${QT_HEADERS_DIR})
+    foreach(__qtmodule__ QtCore QtGui QtOpenGl ${ARGN})
+        string(TOUPPER ${__qtmodule__} __qtmodule__)
+        add_definitions(${QT_${__qtmodule__}_DEFINITIONS})
+        include_directories(${QT_${__qtmodule__}_INCLUDE_DIR})
+        link_directories(${QT_${__qtmodule__}_LIBRARY_DIR})
+    endforeach()
+endmacro()
+
+# Autodetect the available OpenCV version and make it available for Rock's DEPS_PKGCONFIG mechanism
+#
+# This tries to find the name of the opencv pkg-config package, due to the change
+# from `opencv` for versions before 4.0 to `opencv4` later on.
+#
+# Basic usage is to call this function at toplevel with the name of the
+# variable. This variable will be set with the name of the opencv pkg-config
+# package that should be used on this installation, for instance:
+#
+#    rock_opencv_autodetect(OPENCV_PACKAGE)
+#    rock_library(somelib DEPS_PKGCONFIG ${OPENCV_PACKAGE})
+#
+# The function declares the variable as CACHED. So, one can define it explicitely
+# in the CMake call to override the detected version, e.g.
+#
+#    cmake -DOPENCV_PACKAGE=opencv ..
+#
+# The call will fail if no OpenCV package can be found.
+function(rock_opencv_autodetect VARIABLE)
+    if (${${VARIABLE}})
+        return()
+    endif()
+
+    foreach(__opencv_candidate opencv opencv4)
+        pkg_check_modules(__autodetect_opencv ${__opencv_candidate})
+        if (__autodetect_opencv_FOUND)
+            set(${VARIABLE} ${__opencv_candidate} CACHE STRING
+                "The pkg-config package that should be resolved for OpenCV. Default is to auto-detect")
+            return()
+        endif()
+    endforeach()
+    message(FATAL_ERROR "failed to autodetect OpenCV version")
+endfunction()
+
