@@ -413,11 +413,20 @@ macro(rock_target_definition TARGET_NAME)
         rock_libraries_for_pkgconfig(${TARGET_NAME}_PKGCONFIG_LIBS
             ${__dep_libraries})
 
+        get_property(__dep_libraries TARGET ${__dep} PROPERTY INTERFACE_LINK_LIBRARIES)
+        rock_libraries_for_pkgconfig(${TARGET_NAME}_PKGCONFIG_LIBS
+            ${__dep_libraries})
+
+        get_property(__dep_link_dirs TARGET ${__dep} PROPERTY INTERFACE_LINK_DIRECTORIES)
+        foreach(__dep_linkdir ${__dep_link_dirs})
+            set(${TARGET_NAME}_PKGCONFIG_LIBS
+                "${${TARGET_NAME}_PKGCONFIG_LIBS} -L${__dep_linkdir}")
+        endforeach()
+
         get_property(__dep_include_dirs TARGET ${__dep} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
         foreach(__dep_incdir ${__dep_include_dirs})
             set(${TARGET_NAME}_PKGCONFIG_CFLAGS
                 "${${TARGET_NAME}_PKGCONFIG_CFLAGS} -I${__dep_incdir}")
-            message(STATUS ${__dep_incdir})
         endforeach()
     endforeach()
 
