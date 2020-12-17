@@ -353,6 +353,9 @@ macro(rock_target_definition TARGET_NAME)
             set(${TARGET_NAME}_INSTALL OFF)
         elseif(ELEMENT STREQUAL "LANG_C")
             set(${TARGET_NAME}_LANG_C TRUE)
+        elseif(ELEMENT STREQUAL "EXPORT")
+            set(${TARGET_NAME}_MODE EXPORT)
+            set(${TARGET_NAME}_EXPORT "EXPORT")
         else()
             list(APPEND ${TARGET_NAME}_${${TARGET_NAME}_MODE} "${ELEMENT}")
         endif()
@@ -408,15 +411,15 @@ macro(rock_target_definition TARGET_NAME)
         endforeach()
     endforeach()
 
-    foreach(__dep ${${TARGET_NAME}_PUBLIC_TARGET})
-        get_property(__dep_libraries TARGET ${__dep} PROPERTY LOCATION)
+    rock_target_resolve_transitive_dependencies(
+        __dependent_targets __dependent_libs ${${TARGET_NAME}_PUBLIC_TARGET}
+    )
+    foreach(__dep ${__dependent_libs})
         rock_libraries_for_pkgconfig(${TARGET_NAME}_PKGCONFIG_LIBS
-            ${__dep_libraries})
+            ${__dep})
+    endforeach()
 
-        get_property(__dep_libraries TARGET ${__dep} PROPERTY INTERFACE_LINK_LIBRARIES)
-        rock_libraries_for_pkgconfig(${TARGET_NAME}_PKGCONFIG_LIBS
-            ${__dep_libraries})
-
+    foreach(__dep ${__dependent_targets})
         get_property(__dep_link_dirs TARGET ${__dep} PROPERTY INTERFACE_LINK_DIRECTORIES)
         foreach(__dep_linkdir ${__dep_link_dirs})
             set(${TARGET_NAME}_PKGCONFIG_LIBS
@@ -478,6 +481,33 @@ macro(rock_target_definition TARGET_NAME)
         list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_UI_HDRS})
     endif()
 endmacro()
+
+function(rock_target_resolve_transitive_dependencies TARGETS LIBS)
+    foreach(obj ${ARGN})
+        if (TARGET ${obj})
+            get_target_property(target_type ${obj} TYPE)
+            # CMake has a concept called "INTERFACE_LIBRARY" which is not an actual
+            # target. It does not build anything, so does not have a location
+            #
+            # However, it does have other useful properties such as link/include
+            # directories
+            if (NOT target_type STREQUAL "INTERFACE_LIBRARY")
+                get_property(target_location TARGET ${obj} PROPERTY LOCATION)
+            endif()
+            get_property(dep_libraries TARGET ${obj} PROPERTY INTERFACE_LINK_LIBRARIES)
+            rock_target_resolve_transitive_dependencies(
+                recursive_targets recursive_libs ${dep_libraries}
+            )
+            list(APPEND targets ${obj} ${recursive_targets})
+            list(APPEND libs ${target_location} ${recursive_libs})
+        else()
+            list(APPEND libs ${obj})
+        endif()
+    endforeach()
+
+    set(${TARGETS} "${targets}" PARENT_SCOPE)
+    set(${LIBS} "${libs}" PARENT_SCOPE)
+endfunction()
 
 ## Common post-target-definition setup for all C/C++ targets
 macro(rock_target_setup TARGET_NAME)
@@ -714,7 +744,7 @@ function(rock_library TARGET_NAME)
 
     if (${TARGET_NAME}_INSTALL)
         if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
-            install(TARGETS ${TARGET_NAME}
+            install(TARGETS ${TARGET_NAME} ${${TARGET_NAME}_EXPORT}
                 LIBRARY DESTINATION lib
                 # On Windows the dll part of a library is treated as RUNTIME target
                 # and the corresponding import library is treated as ARCHIVE target
