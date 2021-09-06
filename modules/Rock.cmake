@@ -1,49 +1,6 @@
-# Compile all targets with C++11 enabled.
-#
-# By default, this exports the corresponding compile flags to the target's
-# pkg-config file.
-#
-# When using CMake 3.1 or later, it is recommended to use CMake's own mechanism
-# instead of this macro, e.g.
-#
-#   set(CMAKE_CXX_STANDARD 11)
-#   set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#
-# The setting will be picked up by the rock targets, and you may decide to use
-# other standards as e.g. C++14 this way.
-#
-# The ROCK_PUBLIC_CXX_STANDARD variable allows to override this behaviour. It
-# sets the standard that is exported in the .pc file, but does not change how the
-# standard is handled internally in the package. It is meant as a way to use
-# C++11 internally but have C++98 headers (and avoid propagating the C++11
-# choice downstream).
-#
-# For instance,
-#   set(CMAKE_CXX_STANDARD 11)
-#   set(ROCK_PUBLIC_CXX_STANDARD 98)
-#   set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#
-# Will build the package using C++11 but export -std=c++98 in the pkg-config
-# file. Set the variable to empty to avoid exporting any -std flag in the
-# pkgconfig file, e.g.:
-#   set(ROCK_PUBLIC_CXX_STANDARD)
-#
+# Deprecated: Compile all targets with C++11 enabled.
 macro(rock_activate_cxx11)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-    if (CMAKE_VERSION VERSION_LESS "3.1")
-        CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-        CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-        if(COMPILER_SUPPORTS_CXX11)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-        elseif(COMPILER_SUPPORTS_CXX0X)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-        else()
-            message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
-        endif()
-    endif()
+    message(WARNING "Using 'rock_activate_cxx11' is deprecated, use 'target_compile_features(mylib PUBLIC cxx_std_11)' instead.")
 endmacro()
 
 
@@ -122,9 +79,6 @@ at toplevel, like this:\
     rock_use_full_rpath("${CMAKE_INSTALL_PREFIX}/lib")
     include(CheckCXXCompilerFlag)
     include(FindPkgConfig)
-    if(ROCK_USE_CXX11)
-        rock_activate_cxx11()
-    endif()
     rock_add_compiler_flag_if_it_exists(-Wall)
     rock_add_compiler_flag_if_it_exists(-Wno-unused-local-typedefs)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
@@ -618,18 +572,6 @@ function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
     set(PKGCONFIG_REQUIRES ${${TARGET_NAME}_PKGCONFIG_REQUIRES})
     set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
     set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
-
-    if (DEFINED ROCK_PUBLIC_CXX_STANDARD)
-        set(cxx_standard ${ROCK_PUBLIC_CXX_STANDARD})
-    elseif (TARGET ${TARGET_NAME} AND NOT CMAKE_VERSION VERSION_LESS "3.1")
-        get_property(cxx_standard TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD)
-    else()
-        set(cxx_standard ${CMAKE_CXX_STANDARD})
-    endif()
-
-    if (cxx_standard)
-        set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -std=c++${cxx_standard}")
-    endif()
 
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
