@@ -576,18 +576,6 @@ function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
     set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
     set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
 
-    if (DEFINED ROCK_PUBLIC_CXX_STANDARD)
-        set(cxx_standard ${ROCK_PUBLIC_CXX_STANDARD})
-    elseif (TARGET ${TARGET_NAME} AND NOT CMAKE_VERSION VERSION_LESS "3.1")
-        get_property(cxx_standard TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD)
-    else()
-        set(cxx_standard ${CMAKE_CXX_STANDARD})
-    endif()
-
-    if (cxx_standard)
-        set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -std=c++${cxx_standard}")
-    endif()
-
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
