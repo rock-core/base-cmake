@@ -435,8 +435,8 @@ macro(rock_target_definition TARGET_NAME)
 
     list(LENGTH ${TARGET_NAME}_MOC QT_SOURCE_LENGTH)
     if (QT_SOURCE_LENGTH GREATER 0)
-	if(NOT DEFINED ROCK_QT_VERSION)
-	    message(WARNING "you are requesting moc generation, but did not call rock_find_qt4() or rock_find_qt5(). Explicitely add rock_find_qt4() or rock_find_qt5() in your root CMakeLists.txt, just before calling rock_standard_layout()")
+        if(NOT DEFINED ROCK_QT_VERSION)
+            message(WARNING "you are requesting moc generation, but did not call rock_find_qt4() or rock_find_qt5(). Explicitely add rock_find_qt4() or rock_find_qt5() in your root CMakeLists.txt, just before calling rock_standard_layout()")
             rock_find_qt4()
         endif()
 
