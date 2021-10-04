@@ -1228,17 +1228,9 @@ macro (rock_find_qt5)
         set(__arg_optreq REQUIRED)
     endif()
 
-    find_package(Qt5 ${__arg_optreq} COMPONENTS Core Gui OpenGL ${__arglist})
-    include_directories(${QT_HEADERS_DIR})
+    find_package(Qt5 ${__arg_optreq} COMPONENTS ${__arglist})
     set(ROCK_QT_VERSION 5)
-    
-    foreach(__qtmodule__ Core Gui OpenGL ${ARGN})
-        #string(TOUPPER ${__qtmodule__} __qtmodule__)
-        add_definitions(${Qt5${__qtmodule__}_DEFINITIONS})
-        include_directories(${Qt5${__qtmodule__}_INCLUDE_DIRS})
-        link_directories(${Qt5${__qtmodule__}_LIBRARY_DIR})
-    endforeach()
-    
+     
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
     set(CMAKE_AUTOUIC ON)
