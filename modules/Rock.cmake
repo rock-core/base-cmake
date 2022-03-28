@@ -26,7 +26,7 @@
 # Will build the package using C++11 but export -std=c++98 in the pkg-config
 # file. Set the variable to empty to avoid exporting any -std flag in the
 # pkgconfig file, e.g.:
-#   set(ROCK_PUBLIC_CXX_STANDARD)
+#   set(ROCK_PUBLIC_CXX_STANDARD "")
 #
 macro(rock_activate_cxx11)
     set(CMAKE_CXX_EXTENSIONS OFF)
