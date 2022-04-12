@@ -26,7 +26,7 @@
 # Will build the package using C++11 but export -std=c++98 in the pkg-config
 # file. Set the variable to empty to avoid exporting any -std flag in the
 # pkgconfig file, e.g.:
-#   set(ROCK_PUBLIC_CXX_STANDARD)
+#   set(ROCK_PUBLIC_CXX_STANDARD "")
 #
 macro(rock_activate_cxx11)
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -470,9 +470,9 @@ macro(rock_target_definition TARGET_NAME)
         endforeach()
 
         if (ROCK_QT_VERSION EQUAL 5)
-            QT5_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC})
+            QT5_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC} TARGET ${TARGET_NAME})
         else()
-            QT4_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC})
+            QT4_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC} TARGET ${TARGET_NAME})
         endif()
         list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_MOC_SRCS})
     endif()
