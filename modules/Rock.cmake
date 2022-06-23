@@ -279,10 +279,19 @@ macro(rock_standard_layout)
             message(STATUS "unit tests disabled as ROCK_TEST_ENABLED is set to OFF")
         endif()
 
-        option(ROCK_CLANG_STYLING_CHECK_ENABLED 
-               "set to ON to styling check on test targets" OFF)
-        option(ROCK_CLANG_LINTING_CHECK_ENABLED 
-               "set to ON to linting check on test targets" OFF)
+    endif()
+    file(GLOB_RECURSE source_and_test_files CONFIGURE_DEPENDS "src/*[ch]pp" "src/*[ch]" "test/*[ch]pp" "test/*[ch]")
+
+    option(ROCK_CLANG_STYLING_CHECK_ENABLED 
+           "set to ON to styling check on test targets" OFF)
+    if (ROCK_CLANG_STYLING_CHECK_ENABLED)
+        rock_setup_styling_check(${PROJECT_NAME} "${source_and_test_files}")
+    endif()
+
+    option(ROCK_CLANG_LINTING_CHECK_ENABLED 
+           "set to ON to linting check on test targets" OFF)
+    if (ROCK_CLANG_LINTING_CHECK_ENABLED)
+        rock_setup_linting_check(${PROJECT_NAME} "${source_and_test_files}")
     endif()
 endmacro()
 
@@ -764,16 +773,11 @@ function(rock_library TARGET_NAME)
                 ARCHIVE DESTINATION lib
                 RUNTIME DESTINATION bin)
         endif()
-        if (TARGET ${TARGET_NAME})
-            get_property(library_files TARGET ${TARGET_NAME} PROPERTY SOURCES)
-        endif()
 
         # Install headers and keep directory structure
         if(${TARGET_NAME}_HEADERS)
             rock_install_headers(${${TARGET_NAME}_HEADERS})
-            list(APPEND library_files ${${TARGET_NAME}_HEADERS})
         endif()
-        set(library_files ${library_files} CACHE STRING "list of files given on rock library call")
     endif()
 endfunction()
 
@@ -976,69 +980,59 @@ function(rock_gtest TARGET_NAME)
 
     rock_setup_gtest_test(${TARGET_NAME} ${GMOCK_DIR} ${GTEST_DIR})
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
-
-    if (ROCK_CLANG_STYLING_CHECK_ENABLED OR ROCK_CLANG_LINTING_CHECK_ENABLED)
-        get_target_property(test_files ${TARGET_NAME} SOURCES)
-        list(TRANSFORM test_files PREPEND "${PROJECT_SOURCE_DIR}/test/")
-        list(TRANSFORM library_files PREPEND "${PROJECT_SOURCE_DIR}/src/")
-        set(analyzed_files "${test_files};${library_files}")
-        list(FILTER analyzed_files EXCLUDE REGEX ".*gmock|gtest.*")
-
-        if (ROCK_CLANG_STYLING_CHECK_ENABLED)
-            rock_setup_styling_check(${TARGET_NAME} "${analyzed_files}")
-        endif()
-        if (ROCK_CLANG_LINTING_CHECK_ENABLED)
-            rock_setup_linting_check(${TARGET_NAME} "${analyzed_files}")
-        endif()
-    endif()
 endfunction()
 
-function(rock_setup_styling_check TARGET_NAME analyzed_files)
+function(rock_setup_styling_check TARGET_NAME)
     # Setup clang-format styling report
     message(STATUS "Setting up linting for ${TARGET_NAME}")
     find_program(
         clang_format_exec NAMES 
         clang-format clang-format-10 clang-format-11 clang-format-12
-        clang-format-13 clang-format-14 clang-format-15 ${CLANG_FORMAT_EXECUTABLE}
+        clang-format-13 clang-format-14 clang-format-15 ${ROCK_CLANG_FORMAT_EXECUTABLE}
     )
-    if (clang_format_exec)
-        add_test(
-            NAME
-            clangformat
-            COMMAND
-            ${clang_format_exec}
-            -style=file:${clang_format_config_path}
-            -n
-            ${clang_format_options}
-            ${analyzed_files}
-        )
-        set_tests_properties(test-${TARGET_NAME}-cxx PROPERTIES FIXTURES_SETUP clangformat)
-    else()
+    if (NOT clang_format_exec)
         message(FATAL_ERROR "Could not find an executable for clang-format.")
     endif()
+    if (NOT ROCK_CLANG_FORMAT_CONFIG_PATH)
+        message(FATAL_ERROR "Clang-format config file path is unset.")
+    endif()
+
+    add_test(
+        NAME
+        clangformat
+        COMMAND
+        ${clang_format_exec}
+        -style=file:${ROCK_CLANG_FORMAT_CONFIG_PATH}
+        -n
+        ${ROCK_CLANG_FORMAT_OPTIONS}
+        ${ARGN}
+    )
 endfunction()
 
-function(rock_setup_linting_check TARGET_NAME analyzed_files)
+function(rock_setup_linting_check TARGET_NAME)
     message(STATUS "Setting up linting for ${TARGET_NAME}")
     # Setup Clang-Tidy linting as a test command
     find_program(
-        clang_tidy_exec clang-tidy ${CLANG_TIDY_EXECUTABLE}
+        clang_tidy_exec clang-tidy ${ROCK_CLANG_TIDY_EXECUTABLE}
     )
-    if (clang_tidy_exec)
-        add_test(
-            NAME
-            clangtidy
-            COMMAND
-            ${clang_tidy_exec}
-            -p
-            ${PROJECT_BINARY_DIR}
-            --config-file=${clang_tidy_config_path}
-            ${analyzed_files}
-        )
-        set_tests_properties(test-${TARGET_NAME}-cxx PROPERTIES FIXTURES_SETUP clangtidy)
-    else()
+    if (NOT clang_tidy_exec)
         message(FATAL_ERROR "Could not find an executable for clang-tidy.")
     endif()
+    if (NOT ROCK_CLANG_TIDY_CONFIG_PATH)
+        message(FATAL_ERROR "Clang-tidy config file path unset.")
+    endif()
+
+    add_test(
+        NAME
+        clangtidy
+        COMMAND
+        ${clang_tidy_exec}
+        -p
+        ${PROJECT_BINARY_DIR}
+        --config-file=${ROCK_CLANG_TIDY_CONFIG_PATH}
+        ${ROCK_CLANG_TIDY_OPTIONS}
+        ${ARGN}
+    )
 endfunction()
 
 function(rock_setup_gtest_test TARGET_NAME GMOCK_DIR GTEST_DIR)
