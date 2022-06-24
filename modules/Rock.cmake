@@ -987,8 +987,8 @@ function(rock_setup_styling_check TARGET_NAME)
     message(STATUS "Setting up linting for ${TARGET_NAME}")
     find_program(
         clang_format_exec NAMES 
-        clang-format clang-format-10 clang-format-11 clang-format-12
-        clang-format-13 clang-format-14 clang-format-15 ${ROCK_CLANG_FORMAT_EXECUTABLE}
+        ${ROCK_CLANG_FORMAT_EXECUTABLE} clang-format clang-format-10 clang-format-11 clang-format-12
+        clang-format-13 clang-format-14 clang-format-15 
     )
     if (NOT clang_format_exec)
         message(FATAL_ERROR "Could not find an executable for clang-format.")
@@ -1013,7 +1013,7 @@ function(rock_setup_linting_check TARGET_NAME)
     message(STATUS "Setting up linting for ${TARGET_NAME}")
     # Setup Clang-Tidy linting as a test command
     find_program(
-        clang_tidy_exec clang-tidy ${ROCK_CLANG_TIDY_EXECUTABLE}
+        clang_tidy_exec NAMES ${ROCK_CLANG_TIDY_EXECUTABLE} clang-tidy
     )
     if (NOT clang_tidy_exec)
         message(FATAL_ERROR "Could not find an executable for clang-tidy.")
