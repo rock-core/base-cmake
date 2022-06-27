@@ -285,13 +285,15 @@ macro(rock_standard_layout)
     option(ROCK_CLANG_STYLING_CHECK_ENABLED 
            "set to ON to styling check on test targets" OFF)
     if (ROCK_CLANG_STYLING_CHECK_ENABLED)
-        rock_setup_styling_check(${PROJECT_NAME} "${source_and_test_files}")
+        enable_testing()
+        rock_setup_styling_check(${PROJECT_NAME} ${source_and_test_files})
     endif()
 
     option(ROCK_CLANG_LINTING_CHECK_ENABLED 
            "set to ON to linting check on test targets" OFF)
     if (ROCK_CLANG_LINTING_CHECK_ENABLED)
-        rock_setup_linting_check(${PROJECT_NAME} "${source_and_test_files}")
+        enable_testing()
+        rock_setup_linting_check(${PROJECT_NAME} ${source_and_test_files})
     endif()
 endmacro()
 
