@@ -280,16 +280,15 @@ macro(rock_standard_layout)
         endif()
 
     endif()
-    file(GLOB_RECURSE source_and_test_files CONFIGURE_DEPENDS "src/*[ch]pp" "src/*[ch]" "test/*[ch]pp" "test/*[ch]")
 
-    option(ROCK_CLANG_STYLING_CHECK_ENABLED 
+    option(ROCK_CLANG_STYLING_CHECK_ENABLED
            "set to ON to styling check on test targets" OFF)
     if (ROCK_CLANG_STYLING_CHECK_ENABLED)
         enable_testing()
         rock_setup_styling_check(${PROJECT_NAME} ${source_and_test_files})
     endif()
 
-    option(ROCK_CLANG_LINTING_CHECK_ENABLED 
+    option(ROCK_CLANG_LINTING_CHECK_ENABLED
            "set to ON to linting check on test targets" OFF)
     if (ROCK_CLANG_LINTING_CHECK_ENABLED)
         enable_testing()
@@ -984,13 +983,32 @@ function(rock_gtest TARGET_NAME)
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
 endfunction()
 
+function(rock_get_clang_targets VAR filepath)
+    if (EXISTS "${filepath}")
+        file(STRINGS ${filepath} checklist REGEX "^(\\+|-)+")
+        foreach(entry ${checklist})
+            string(REGEX MATCH "^(\\+|-)?" symbol ${entry})
+            string(REPLACE ${symbol} "" filename ${entry})
+            file(GLOB listed_file "${filename}")
+            if (symbol STREQUAL "+")
+                list(APPEND target_list ${listed_file})
+            else()
+                list(REMOVE_ITEM target_list ${listed_file})
+            endif()
+        endforeach(entry)
+    else()
+        file(GLOB target_list "src/*[cpp|hpp|c|h|cc|hh]" "test/*[cpp|hpp|c|h|cc|hh]")
+    endif()
+    set(${VAR} ${target_list} PARENT_SCOPE)
+endfunction()
+
 function(rock_setup_styling_check TARGET_NAME)
-    # Setup clang-format styling report
-    message(STATUS "Setting up linting for ${TARGET_NAME}")
+    rock_get_clang_targets(clang_targets "${CMAKE_SOURCE_DIR}/.format_targets")
+    message(STATUS "Setting up styling for ${TARGET_NAME} package")
     find_program(
-        clang_format_exec NAMES 
+        clang_format_exec NAMES
         ${ROCK_CLANG_FORMAT_EXECUTABLE} clang-format clang-format-10 clang-format-11 clang-format-12
-        clang-format-13 clang-format-14 clang-format-15 
+        clang-format-13 clang-format-14 clang-format-15
     )
     if (NOT clang_format_exec)
         message(FATAL_ERROR "Could not find an executable for clang-format.")
@@ -1007,12 +1025,13 @@ function(rock_setup_styling_check TARGET_NAME)
         -style=file:${ROCK_CLANG_FORMAT_CONFIG_PATH}
         -n
         ${ROCK_CLANG_FORMAT_OPTIONS}
-        ${ARGN}
+        ${clang_targets}
     )
 endfunction()
 
 function(rock_setup_linting_check TARGET_NAME)
-    message(STATUS "Setting up linting for ${TARGET_NAME}")
+    rock_get_clang_targets(clang_targets "${CMAKE_SOURCE_DIR}/.lint_targets")
+    message(STATUS "Setting up linting for ${TARGET_NAME} package")
     # Setup Clang-Tidy linting as a test command
     find_program(
         clang_tidy_exec NAMES ${ROCK_CLANG_TIDY_EXECUTABLE} clang-tidy
@@ -1033,7 +1052,7 @@ function(rock_setup_linting_check TARGET_NAME)
         ${PROJECT_BINARY_DIR}
         --config-file=${ROCK_CLANG_TIDY_CONFIG_PATH}
         ${ROCK_CLANG_TIDY_OPTIONS}
-        ${ARGN}
+        ${clang_targets}
     )
 endfunction()
 
@@ -1299,7 +1318,7 @@ macro (rock_find_qt5)
 
     find_package(Qt5 ${__arg_optreq} COMPONENTS ${__arglist})
     set(ROCK_QT_VERSION 5)
-     
+
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
     set(CMAKE_AUTOUIC ON)
