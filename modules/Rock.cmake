@@ -1013,8 +1013,11 @@ function(rock_setup_styling_check TARGET_NAME)
     if (NOT clang_format_exec)
         message(FATAL_ERROR "Could not find an executable for clang-format.")
     endif()
-    if (NOT ROCK_CLANG_FORMAT_CONFIG_PATH)
-        message(FATAL_ERROR "Clang-format config file path is unset.")
+
+    set(clang_config_option "-style=file")
+    if(${ROCK_CLANG_FORMAT_CONFIG_PATH})
+        message(WARNING "Setting an explicit config path for the styling check is only available for clang-format-14 or later.")
+        set(clang_config_option "-style=file:${ROCK_CLANG_FORMAT_CONFIG_PATH}")
     endif()
 
     add_test(
@@ -1022,7 +1025,7 @@ function(rock_setup_styling_check TARGET_NAME)
         clangformat
         COMMAND
         ${clang_format_exec}
-        -style=file:${ROCK_CLANG_FORMAT_CONFIG_PATH}
+        ${clang_config_option}
         -n
         ${ROCK_CLANG_FORMAT_OPTIONS}
         ${clang_targets}
