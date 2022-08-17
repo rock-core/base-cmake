@@ -1007,8 +1007,7 @@ function(rock_setup_styling_check TARGET_NAME)
     message(STATUS "Setting up styling for ${TARGET_NAME} package")
     find_program(
         clang_format_exec NAMES
-        ${ROCK_CLANG_FORMAT_EXECUTABLE} clang-format clang-format-10 clang-format-11 clang-format-12
-        clang-format-13 clang-format-14 clang-format-15
+        ${ROCK_CLANG_FORMAT_EXECUTABLE} clang-format
     )
     if (NOT clang_format_exec)
         message(FATAL_ERROR "Could not find an executable for clang-format.")
