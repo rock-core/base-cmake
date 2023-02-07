@@ -32,6 +32,8 @@ if (NOT YARD_FOUND)
     message(STATUS "did not find Yard, the Ruby packages won't generate documentation")
 endif()
 
+option(ROCK_RUBY_TESTS_EXPLICIT_AUTORUN "Explicitly add -rminitest/autorun to run ruby tests (DEPRECATED)" ON)
+
 # rock_add_ruby_package(NAME
 #   [RUBY_FILES rubyfile.rb rubydir]
 #   [EXT_PLAIN|EXT_RICE] extname file1 file2 file3
@@ -267,9 +269,13 @@ else()
             )
         endif()
 
+        if (ROCK_RUBY_TESTS_EXPLICIT_AUTORUN)
+            set(explicit_minitest -rminitest/autorun)
+        endif()
+
         add_test(NAME test-${TARGET}-ruby
             WORKING_DIRECTORY "${workdir}"
-            COMMAND ${RUBY_EXECUTABLE} -rminitest/autorun -I${CMAKE_CURRENT_SOURCE_DIR}/lib 
+            COMMAND ${RUBY_EXECUTABLE} ${explicit_minitest} -I${CMAKE_CURRENT_SOURCE_DIR}/lib 
                     -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -e "${test_requires}"
                     --
                     ${__minitest_args}
