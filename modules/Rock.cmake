@@ -1406,7 +1406,7 @@ macro (rock_find_qt5)
         set(__arg_optreq REQUIRED)
     endif()
 
-    find_package(Qt5 ${__arg_optreq} COMPONENTS ${__arglist})
+    find_package(Qt5 ${__arg_optreq} COMPONENTS Core Gui Widgets OpenGL ${__arglist})
     set(ROCK_QT_VERSION 5)
 
     set(CMAKE_AUTOMOC ON)
