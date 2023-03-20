@@ -220,7 +220,10 @@ macro(rock_standard_layout)
                 add_subdirectory(viz)
             else()
                 rock_find_pkgconfig(vizkit3d vizkit3d)
-                if (vizkit3d_FOUND)
+                if (ROCK_FEATURE_NOCURDIR)
+                    rock_find_pkgconfig(vizkit3d-qt5 vizkit3d-qt5)
+                endif()
+                if (vizkit3d_FOUND OR vizkit3d-qt5_FOUND)
                     message(STATUS "vizkit3d found ... building the vizkit3d plugin")
                     rock_add_source_dir(viz vizkit3d)
                 else()
@@ -962,7 +965,8 @@ endfunction()
 # plugin. In Rock, vizkit3d is the base for data display. Vizkit plugins are
 # plugins to the 3D display in vizkit3d.
 #
-# By convention, <name> should end in "-viz"
+# By convention, <name> should end in "-viz" for qt4 plugins and in "-viz-qt5"
+# for their qt5 based counterpart.
 #
 # The library gets linked against the vizkit3d libraries automatically (no
 # need to list them in DEPS_PKGCONFIG). Moreoer, unlike with a normal shared
@@ -997,7 +1001,12 @@ function(rock_vizkit_plugin TARGET_NAME)
     if (${PROJECT_NAME} STREQUAL "vizkit3d")
         # vizkit3d provides the library and uses its own target
     else()
-        list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
+        if ((DEFINED ROCK_QT_VERSION_5) AND (NOT DEFINED ROCK_QT_VERSION_4))
+            message(FATAL_ERROR "You are using the qt4 rock_vizkit_plugin instead of rock_vizkit_plugin_qt5 while only having looked for qt using rock_find_qt5. Use rock_vizkit_plugin_qt5, suffix the library with an additional -qt5 and adjust the .pc file accordingly. You will also need to add rock_feature(NOCURDIR) before rock_standard_layout, best just after rock_init. Better yet, add rock_find_qt4(NOCURDIR), and duplicate your rock_vizkit_plugin call for qt5.")
+            list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d-qt5)
+        else()
+            list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
+        endif()
     endif()
     rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
     if (${TARGET_NAME}_INSTALL)
@@ -1011,6 +1020,78 @@ function(rock_vizkit_plugin TARGET_NAME)
             DESTINATION lib/qt/designer/widgets
             RENAME ${PROJECT_NAME}_vizkit.rb
             OPTIONAL)
+    endif()
+endfunction()
+
+## Defines a new vizkit3d plugin
+#
+# rock_vizkit_plugin_qt5(name
+#     SOURCES source.cpp source1.cpp ...
+#     [DEPS target1 target2 target3]
+#     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
+#     [DEPS_TARGET target1 target2 target3]
+#     [DEPS_CMAKE pkg1 pkg2 pkg3]
+#     [HEADERS header1.hpp header2.hpp header3.hpp ...]
+#     [MOC qtsource1.hpp qtsource2.hpp]
+#     [MOC5 qtsource1.hpp qtsource2.hpp]
+#     [NOINSTALL])
+#
+# Creates and (optionally) installs a shared library that defines a vizkit3d
+# plugin. In Rock, vizkit3d is the base for data display. Vizkit plugins are
+# plugins to the 3D display in vizkit3d.
+#
+# By convention, <name> should end in "-viz" for qt4 plugins and in "-viz-qt5"
+# for their qt5 based counterpart.
+#
+# The library gets linked against the vizkit3d libraries automatically (no
+# need to list them in DEPS_PKGCONFIG). Moreoer, unlike with a normal shared
+# library, the headers get installed in include/vizkit3d
+#
+# The following arguments are mandatory:
+#
+# SOURCES: list of the C++ sources that should be built into that library
+#
+# The following optional arguments are available:
+#
+# DEPS: lists the other targets from this CMake project against which the
+# library should be linked
+# DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
+# necessary link and compilation flags are added
+# DEPS_TARGET: lists the CMake imported targets which should be used for this
+# target. The targets must have been found already using e.g. `find_package`
+# DEPS_CMAKE: list of packages which can be found with CMake's find_package,
+# that the library depends upon. It is assumed that the Find*.cmake scripts
+# follow the cmake accepted standard for variable naming
+# HEADERS: a list of headers that should be installed with the library. They get
+# installed in include/project_name
+# MOC: if the library is Qt-based, a list of either source or header files.
+# If headers are listed, these headers should be processed by moc, with the
+# resulting implementation files are built into the library. If they are source
+# files, they get added to the library and the corresponding header file is
+# passed to moc.
+# MOC5: same as MOC, but for Qt5 instead of Qt4
+# NOINSTALL: by default, the library gets installed on 'make install'. If this
+# argument is given, this is turned off
+function(rock_vizkit_plugin_qt5 TARGET_NAME)
+    if (NOT ROCK_FEATURE_NOCURDIR)
+        message(FATAL_ERROR "rock_vizkit_plugin_qt5 cannot be used without rock_feature(NOCURDIR)."
+                " Add it before rock_standard_layout, best just after rock_init."
+                " An earlier search for vizkit3d has already added include_directories."
+                )
+    endif()
+    if (${PROJECT_NAME} STREQUAL "vizkit3d")
+        # vizkit3d provides the library and uses its own target
+    else()
+        list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d-qt5)
+    endif()
+    rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
+    if (${TARGET_NAME}_INSTALL)
+        if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
+            install(TARGETS ${TARGET_NAME}
+                LIBRARY DESTINATION lib)
+        endif()
+        install(FILES ${${TARGET_NAME}_HEADERS}
+            DESTINATION include/vizkit3d)
     endif()
 endfunction()
 
