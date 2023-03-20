@@ -1357,13 +1357,19 @@ endmacro()
 # The macro finds QtCore, QtGui and QtOpenGL by default. Additional arguments
 # can be given to find more components.
 #
+# The argument list can also contain OPTIONAL or REQUIRED, default is to
+# assume REQUIRED.
+#
 # Found include and library paths are added to the current directory. The
 # relevant modules must be added to other targets with `DEPS_CMAKE Qt4`
 macro (rock_find_qt4)
     set(__arglist "${ARGN}")
-    list(GET 0 __arglist __arg_optreq)
-    if ((__arg_optreq EQUAL "OPTIONAL") OR (__arg_optreq EQUAL "REQUIRED"))
-        list(REMOVE_AT __arglist 0)
+    list(FIND __arglist OPTIONAL __arg_optional)
+    list(FIND __arglist REQUIRED __arg_required)
+    list(REMOVE_ITEM __arglist OPTIONAL)
+    list(REMOVE_ITEM __arglist REQUIRED)
+    if (__arg_optional GREATER -1)
+        set(__arg_optreq )
     else()
         set(__arg_optreq REQUIRED)
     endif()
