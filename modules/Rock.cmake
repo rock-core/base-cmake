@@ -465,7 +465,7 @@ macro(rock_target_definition TARGET_NAME)
             rock_find_qt4()
         endif()
 
-        list(APPEND ${TARGET_NAME}_DEPENDENT_LIBS ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
+        list(APPEND ${TARGET_NAME}_DEPENDENT_LIBS Qt4::QtCore Qt4::QtGui)
 
         set(__${TARGET_NAME}_MOC "${${TARGET_NAME}_MOC}")
         set(${TARGET_NAME}_MOC "")
