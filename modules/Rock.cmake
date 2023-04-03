@@ -1360,3 +1360,14 @@ function(rock_opencv_autodetect VARIABLE)
     message(FATAL_ERROR "failed to autodetect OpenCV version")
 endfunction()
 
+## Enable rock cmake module features
+#
+# rock_feature(
+#    )
+#
+# Currently, there are no features.
+macro(rock_feature)
+    foreach(arg ${ARGN})
+        set(ROCK_FEATURE_${arg} ON)
+    endforeach()
+endmacro()
