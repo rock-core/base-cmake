@@ -1407,11 +1407,13 @@ macro (rock_find_qt5)
     endif()
 
     find_package(Qt5 ${__arg_optreq} COMPONENTS Core Gui Widgets OpenGL ${__arglist})
-    set(ROCK_QT_VERSION 5)
+    if(Qt5_FOUND)
+        set(CMAKE_AUTOMOC ON)
+        set(CMAKE_AUTORCC ON)
+        set(CMAKE_AUTOUIC ON)
 
-    set(CMAKE_AUTOMOC ON)
-    set(CMAKE_AUTORCC ON)
-    set(CMAKE_AUTOUIC ON)
+        set(ROCK_QT_VERSION 5)
+    endif()
 endmacro()
 
 # Autodetect the available OpenCV version and make it available for Rock's DEPS_PKGCONFIG mechanism
