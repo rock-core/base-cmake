@@ -1484,9 +1484,15 @@ macro (rock_find_qt4)
     if (NOT ROCK_FEATURE_NOCURDIR)
         include_directories(${QT_HEADERS_DIR})
     endif()
+    if ((NOT ROCK_FEATURE_NOCURDIR) AND ROCK_QT_VERSION_5)
+        message(FATAL_ERROR "rock_find_qt5 has already been used. Without rock_feature(NOCURDIR), rock_find_qt4"
+                " will introduce incompatible definitions and paths into this directory(${CMAKE_CURRENT_SOURCE_DIR})."
+                )
+    endif()
 
     if(Qt4_FOUND)
         set(ROCK_QT_VERSION 4)
+        set(ROCK_QT_VERSION_4 ON)
 
         foreach(__qtmodule__ QtCore QtGui QtOpenGl ${ARGN})
             string(TOUPPER ${__qtmodule__} __qtmodule__)
@@ -1510,6 +1516,11 @@ endmacro()
 # The argument list can also contain OPTIONAL or REQUIRED, default is to
 # assume REQUIRED.
 macro (rock_find_qt5)
+    if (ROCK_QT_VERSION_4 AND (NOT ROCK_FEATURE_NOCURDIR))
+        message(FATAL_ERROR "rock_find_qt4 has already been used without rock_feature(NOCURDIR)."
+                " This introduces incompatible definitions and paths into this directory(${CMAKE_CURRENT_SOURCE_DIR})."
+                )
+    endif()
     set(__arglist "${ARGN}")
     list(FIND __arglist OPTIONAL __arg_optional)
     list(FIND __arglist REQUIRED __arg_requried)
@@ -1524,6 +1535,7 @@ macro (rock_find_qt5)
     find_package(Qt5 ${__arg_optreq} COMPONENTS Core Gui Widgets OpenGL ${__arglist})
     if(Qt5_FOUND)
         set(ROCK_QT_VERSION 5)
+        set(ROCK_QT_VERSION_5 ON)
     endif()
 endmacro()
 
