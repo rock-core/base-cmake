@@ -458,8 +458,8 @@ macro(rock_target_definition TARGET_NAME)
         endforeach()
     endforeach()
 
-    list(LENGTH ${TARGET_NAME}_MOC QT_SOURCE_LENGTH)
-    if (QT_SOURCE_LENGTH GREATER 0)
+    list(LENGTH ${TARGET_NAME}_MOC QT_MOC_LENGTH)
+    if (QT_MOC_LENGTH GREATER 0)
         if(NOT DEFINED ROCK_QT_VERSION)
             message(WARNING "you are requesting moc generation, but did not call rock_find_qt4() or rock_find_qt5(). Explicitely add rock_find_qt4() or rock_find_qt5() in your root CMakeLists.txt, just before calling rock_standard_layout()")
             rock_find_qt4()
@@ -873,6 +873,8 @@ endfunction()
 # plugin. In Rock, vizkit3d is the base for data display. Vizkit plugins are
 # plugins to the 3D display in vizkit3d.
 #
+# By convention, <name> should end in "-viz"
+#
 # The library gets linked against the vizkit3d libraries automatically (no
 # need to list them in DEPS_PKGCONFIG). Moreoer, unlike with a normal shared
 # library, the headers get installed in include/vizkit3d
@@ -903,6 +905,7 @@ endfunction()
 # argument is given, this is turned off
 function(rock_vizkit_plugin TARGET_NAME)
     if (${PROJECT_NAME} STREQUAL "vizkit3d")
+        # vizkit3d provides the library and uses its own target
     else()
         list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
     endif()
