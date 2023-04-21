@@ -1000,7 +1000,7 @@ function(rock_vizkit_plugin TARGET_NAME)
         # vizkit3d provides the library and uses its own target
     else()
         if ((DEFINED ROCK_QT_VERSION_5) AND (NOT DEFINED ROCK_QT_VERSION_4))
-            message(FATAL_ERROR "You are using the qt4 rock_vizkit_plugin instead of rock_vizkit_plugin_qt5 while only having looked for qt using rock_find_qt5. Use rock_vizkit_plugin_qt5, suffix the library with an additional -qt5 and adjust the .pc file accordingly. You will also need to add rock_feature(NOCURDIR) before rock_standard_layout, best just after rock_init. Better yet, add rock_find_qt4(NOCURDIR), and duplicate your rock_vizkit_plugin call for qt5.")
+            message(WARNING "You are using the qt4 rock_vizkit_plugin instead of rock_vizkit_plugin_qt5 while only having looked for qt using rock_find_qt5. Rock.cmake will assume you wanted to build a qt5 vizkit widget. Please use rock_vizkit_plugin_qt5, suffix the library with an additional -qt5 and adjust the .pc file accordingly. Better yet, add rock_feature(NOCURDIR) before rock_standard_layout, best just after rock_init, add rock_find_qt4(), and duplicate your rock_vizkit_plugin call for qt4 and qt5, suffixing the qt5 target with -qt5 as mentioned before.")
             list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d-qt5)
         else()
             list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
@@ -1071,12 +1071,6 @@ endfunction()
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_vizkit_plugin_qt5 TARGET_NAME)
-    if (NOT ROCK_FEATURE_NOCURDIR)
-        message(FATAL_ERROR "rock_vizkit_plugin_qt5 cannot be used without rock_feature(NOCURDIR)."
-                " Add it before rock_standard_layout, best just after rock_init."
-                " An earlier search for vizkit3d has already added include_directories."
-                )
-    endif()
     if (${PROJECT_NAME} STREQUAL "vizkit3d")
         # vizkit3d provides the library and uses its own target
     else()
