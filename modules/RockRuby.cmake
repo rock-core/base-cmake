@@ -32,6 +32,8 @@ if (NOT YARD_FOUND)
     message(STATUS "did not find Yard, the Ruby packages won't generate documentation")
 endif()
 
+option(ROCK_RUBY_TESTS_EXPLICIT_AUTORUN "Explicitly add -rminitest/autorun to run ruby tests (DEPRECATED)" ON)
+
 # rock_add_ruby_package(NAME
 #   [RUBY_FILES rubyfile.rb rubydir]
 #   [EXT_PLAIN|EXT_RICE] extname file1 file2 file3
@@ -107,6 +109,7 @@ function(rock_add_ruby_package NAME)
         rock_ruby_library(${NAME} ${pure_ruby_files})
 
         if (ROCK_TEST_ENABLED AND IS_DIRECTORY test)
+            enable_testing()
             rock_ruby_test(${NAME})
         endif()
 
@@ -211,6 +214,12 @@ else()
     # source directory.
     #
     # The default working directory is the current source directory.
+    #
+    # If the ROCK_TEST_LOG_DIR CMake variable is set, a test report will be
+    # generated under that directory with the name `${TARGET}.junit.xml`. This
+    # support is dependent on the availability of the `minitest-jruby` plugin.
+    # The rock.core package set auto-adds this dependency for CMake packages
+    # that have Rock's `bindings/ruby/test` standard directory
     function(ROCK_RUBY_TEST TARGET)
         set(workdir ${CMAKE_CURRENT_SOURCE_DIR})
         set(mode FILES)
@@ -251,9 +260,26 @@ else()
             set(test_requires "${test_requires}require '${test_file}';")
         endforeach()
 
+        if (ROCK_TEST_LOG_DIR)
+            file(MAKE_DIRECTORY ${ROCK_TEST_LOG_DIR})
+            list(APPEND __minitest_args
+                --junit
+                --junit-filename=${ROCK_TEST_LOG_DIR}/${TARGET}.junit.xml
+                --junit-jenkins
+            )
+        endif()
+
+        if (ROCK_RUBY_TESTS_EXPLICIT_AUTORUN)
+            set(explicit_minitest -rminitest/autorun)
+        endif()
+
         add_test(NAME test-${TARGET}-ruby
             WORKING_DIRECTORY "${workdir}"
-            COMMAND ${RUBY_EXECUTABLE} -rminitest/autorun -I${CMAKE_CURRENT_SOURCE_DIR}/lib -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -e "${test_requires}")
+            COMMAND ${RUBY_EXECUTABLE} ${explicit_minitest} -I${CMAKE_CURRENT_SOURCE_DIR}/lib 
+                    -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -e "${test_requires}"
+                    --
+                    ${__minitest_args}
+        )
     endfunction()
 endif()
 

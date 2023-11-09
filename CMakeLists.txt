@@ -1,7 +1,8 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.9)
+project(cmake VERSION 1.0 DESCRIPTION "Rock's core CMake macros")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules")
 include(${CMAKE_CURRENT_SOURCE_DIR}/modules/Rock.cmake)
-rock_init(cmake 1.0)
+rock_init()
 
 install(FILES
     modules/FindGem.cmake
