@@ -1415,10 +1415,6 @@ macro (rock_find_qt5)
 
     find_package(Qt5 ${__arg_optreq} COMPONENTS ${__arglist})
     set(ROCK_QT_VERSION 5)
-
-    set(CMAKE_AUTOMOC ON)
-    set(CMAKE_AUTORCC ON)
-    set(CMAKE_AUTOUIC ON)
 endmacro()
 
 # Autodetect the available OpenCV version and make it available for Rock's DEPS_PKGCONFIG mechanism
