@@ -109,6 +109,9 @@ endfunction()
 
 ## Main initialization for Rock CMake projects
 macro (rock_init)
+    if (ROCK_INIT_DONE)
+        message(FATAL_ERROR "You are trying to run rock_init twice")
+    endif()
     if (${ARGC} GREATER 0)
         message(WARNING "Passing project name and version to rock_init was a misfeature \
 of Rock's macros since CMake 3.0. You must call CMake's project() \
@@ -132,6 +135,8 @@ at toplevel, like this:\
     if (ROCK_TEST_ENABLED)
         enable_testing()
     endif()
+
+    set(ROCK_INIT_DONE ON)
 endmacro()
 
 macro(rock_exported_includedir_root VAR DIR TARGET_DIR)
@@ -204,6 +209,12 @@ macro(rock_doxygen)
 endmacro()
 
 macro(rock_standard_layout)
+    if (ROCK_STANDARD_LAYOUT_DONE)
+        message(FATAL_ERROR "You tried to call rock_standard_layout twice")
+    endif()
+    if (NOT ROCK_INIT_DONE)
+        message(FATAL_ERROR "You must call rock_init before rock_standard_layout")
+    endif()
     if (EXISTS ${PROJECT_SOURCE_DIR}/Doxyfile.in)
         rock_doxygen()
     endif()
@@ -294,6 +305,8 @@ macro(rock_standard_layout)
         enable_testing()
         rock_setup_linting_check(${PROJECT_NAME} ${source_and_test_files})
     endif()
+
+    set(ROCK_STANDARD_LAYOUT_DONE ON)
 endmacro()
 
 ## Like pkg_check_modules, but calls include_directories and link_directories
@@ -1452,6 +1465,9 @@ endfunction()
 #           set variables on the current directory. Instead, the settings
 #           are applied to the relevant target.
 macro(rock_feature)
+    if (ROCK_STANDARD_LAYOUT_DONE OR (NOT ROCK_INIT_DONE))
+        message(FATAL_ERROR "rock_feature must be called after rock_init and before rock_standard_layout")
+    endif()
     foreach(arg ${ARGN})
         set(ROCK_FEATURE_${arg} ON)
     endforeach()
