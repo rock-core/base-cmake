@@ -109,6 +109,9 @@ endfunction()
 
 ## Main initialization for Rock CMake projects
 macro (rock_init)
+    if (ROCK_INIT_DONE)
+        message(FATAL_ERROR "You are trying to run rock_init twice")
+    endif()
     if (${ARGC} GREATER 0)
         message(WARNING "Passing project name and version to rock_init was a misfeature \
 of Rock's macros since CMake 3.0. You must call CMake's project() \
@@ -132,6 +135,8 @@ at toplevel, like this:\
     if (ROCK_TEST_ENABLED)
         enable_testing()
     endif()
+
+    set(ROCK_INIT_DONE ON)
 endmacro()
 
 macro(rock_exported_includedir_root VAR DIR TARGET_DIR)
@@ -204,6 +209,12 @@ macro(rock_doxygen)
 endmacro()
 
 macro(rock_standard_layout)
+    if (ROCK_STANDARD_LAYOUT_DONE)
+        message(FATAL_ERROR "You tried to call rock_standard_layout twice")
+    endif()
+    if (NOT ROCK_INIT_DONE)
+        message(FATAL_ERROR "You must call rock_init before rock_standard_layout")
+    endif()
     if (EXISTS ${PROJECT_SOURCE_DIR}/Doxyfile.in)
         rock_doxygen()
     endif()
@@ -219,7 +230,7 @@ macro(rock_standard_layout)
             if ("${PROJECT_NAME}" STREQUAL vizkit3d)
                 add_subdirectory(viz)
             else()
-                rock_find_pkgconfig(vizkit3d vizkit3d)
+                pkg_check_modules(vizkit3d vizkit3d)
                 if (vizkit3d_FOUND)
                     message(STATUS "vizkit3d found ... building the vizkit3d plugin")
                     rock_add_source_dir(viz vizkit3d)
@@ -294,6 +305,8 @@ macro(rock_standard_layout)
         enable_testing()
         rock_setup_linting_check(${PROJECT_NAME} ${source_and_test_files})
     endif()
+
+    set(ROCK_STANDARD_LAYOUT_DONE ON)
 endmacro()
 
 ## Like pkg_check_modules, but calls include_directories and link_directories
@@ -458,14 +471,14 @@ macro(rock_target_definition TARGET_NAME)
         endforeach()
     endforeach()
 
-    list(LENGTH ${TARGET_NAME}_MOC QT_SOURCE_LENGTH)
-    if (QT_SOURCE_LENGTH GREATER 0)
+    list(LENGTH ${TARGET_NAME}_MOC QT_MOC_LENGTH)
+    if (QT_MOC_LENGTH GREATER 0)
         if(NOT DEFINED ROCK_QT_VERSION)
             message(WARNING "you are requesting moc generation, but did not call rock_find_qt4() or rock_find_qt5(). Explicitely add rock_find_qt4() or rock_find_qt5() in your root CMakeLists.txt, just before calling rock_standard_layout()")
             rock_find_qt4()
         endif()
 
-        list(APPEND ${TARGET_NAME}_DEPENDENT_LIBS ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
+        list(APPEND ${TARGET_NAME}_DEPENDENT_LIBS Qt4::QtCore Qt4::QtGui)
 
         set(__${TARGET_NAME}_MOC "${${TARGET_NAME}_MOC}")
         set(${TARGET_NAME}_MOC "")
@@ -873,6 +886,8 @@ endfunction()
 # plugin. In Rock, vizkit3d is the base for data display. Vizkit plugins are
 # plugins to the 3D display in vizkit3d.
 #
+# By convention, <name> should end in "-viz"
+#
 # The library gets linked against the vizkit3d libraries automatically (no
 # need to list them in DEPS_PKGCONFIG). Moreoer, unlike with a normal shared
 # library, the headers get installed in include/vizkit3d
@@ -903,6 +918,7 @@ endfunction()
 # argument is given, this is turned off
 function(rock_vizkit_plugin TARGET_NAME)
     if (${PROJECT_NAME} STREQUAL "vizkit3d")
+        # vizkit3d provides the library and uses its own target
     else()
         list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
     endif()
@@ -1357,13 +1373,19 @@ endmacro()
 # The macro finds QtCore, QtGui and QtOpenGL by default. Additional arguments
 # can be given to find more components.
 #
+# The argument list can also contain OPTIONAL or REQUIRED, default is to
+# assume REQUIRED.
+#
 # Found include and library paths are added to the current directory. The
 # relevant modules must be added to other targets with `DEPS_CMAKE Qt4`
 macro (rock_find_qt4)
     set(__arglist "${ARGN}")
-    list(GET 0 __arglist __arg_optreq)
-    if ((__arg_optreq EQUAL "OPTIONAL") OR (__arg_optreq EQUAL "REQUIRED"))
-        list(REMOVE_AT __arglist 0)
+    list(FIND __arglist OPTIONAL __arg_optional)
+    list(FIND __arglist REQUIRED __arg_required)
+    list(REMOVE_ITEM __arglist OPTIONAL)
+    list(REMOVE_ITEM __arglist REQUIRED)
+    if (__arg_optional GREATER -1)
+        set(__arg_optreq )
     else()
         set(__arg_optreq REQUIRED)
     endif()
@@ -1372,36 +1394,47 @@ macro (rock_find_qt4)
     if (NOT ROCK_FEATURE_NOCURDIR)
         include_directories(${QT_HEADERS_DIR})
     endif()
-    set(ROCK_QT_VERSION 4)
 
-    foreach(__qtmodule__ QtCore QtGui QtOpenGl ${ARGN})
-        string(TOUPPER ${__qtmodule__} __qtmodule__)
-        if (NOT ROCK_FEATURE_NOCURDIR)
-            rock_filter_cflag_definitions(_filtered_defs _filtered_opts _filtered_feats ${QT_${__qtmodule__}_DEFINITIONS})
-            add_definitions(${_filtered_defs})
-            add_compile_options(${_filtered_opts})
-            list(APPEND ROCK_COMPILE_FEATURES ${_filtered_feats})
-            include_directories(${QT_${__qtmodule__}_INCLUDE_DIR})
-        endif()
-        link_directories(${QT_${__qtmodule__}_LIBRARY_DIR})
-    endforeach()
+    if(Qt4_FOUND)
+        set(ROCK_QT_VERSION 4)
+
+        foreach(__qtmodule__ QtCore QtGui QtOpenGl ${ARGN})
+            string(TOUPPER ${__qtmodule__} __qtmodule__)
+            if (NOT ROCK_FEATURE_NOCURDIR)
+                rock_filter_cflag_definitions(_filtered_defs _filtered_opts _filtered_feats ${QT_${__qtmodule__}_DEFINITIONS})
+                add_definitions(${_filtered_defs})
+                add_compile_options(${_filtered_opts})
+                list(APPEND ROCK_COMPILE_FEATURES ${_filtered_feats})
+                include_directories(${QT_${__qtmodule__}_INCLUDE_DIR})
+            endif()
+            link_directories(${QT_${__qtmodule__}_LIBRARY_DIR})
+        endforeach()
+    endif()
 endmacro()
 
 # Find Qt5 libraries
 #
 # The macro finds QtCore, QtGui and QtOpenGL by default. Additional arguments
 # can be given to find more components.
+#
+# The argument list can also contain OPTIONAL or REQUIRED, default is to
+# assume REQUIRED.
 macro (rock_find_qt5)
     set(__arglist "${ARGN}")
-    list(GET 0 __arglist __arg_optreq)
-    if ((__arg_optreq EQUAL "OPTIONAL") OR (__arg_optreq EQUAL "REQUIRED"))
-        list(REMOVE_AT __arglist 0)
+    list(FIND __arglist OPTIONAL __arg_optional)
+    list(FIND __arglist REQUIRED __arg_requried)
+    list(REMOVE_ITEM __arglist OPTIONAL)
+    list(REMOVE_ITEM __arglist REQUIRED)
+    if (__arg_optional GREATER -1)
+        set(__arg_optreq )
     else()
         set(__arg_optreq REQUIRED)
     endif()
 
-    find_package(Qt5 ${__arg_optreq} COMPONENTS ${__arglist})
-    set(ROCK_QT_VERSION 5)
+    find_package(Qt5 ${__arg_optreq} COMPONENTS Core Gui Widgets OpenGL ${__arglist})
+    if(Qt5_FOUND)
+        set(ROCK_QT_VERSION 5)
+    endif()
 endmacro()
 
 # Autodetect the available OpenCV version and make it available for Rock's DEPS_PKGCONFIG mechanism
@@ -1448,6 +1481,9 @@ endfunction()
 #           set variables on the current directory. Instead, the settings
 #           are applied to the relevant target.
 macro(rock_feature)
+    if (ROCK_STANDARD_LAYOUT_DONE OR (NOT ROCK_INIT_DONE))
+        message(FATAL_ERROR "rock_feature must be called after rock_init and before rock_standard_layout")
+    endif()
     foreach(arg ${ARGN})
         set(ROCK_FEATURE_${arg} ON)
     endforeach()
