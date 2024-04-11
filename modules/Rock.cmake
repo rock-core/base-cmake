@@ -1433,10 +1433,6 @@ macro (rock_find_qt5)
 
     find_package(Qt5 ${__arg_optreq} COMPONENTS Core Gui Widgets OpenGL ${__arglist})
     if(Qt5_FOUND)
-        set(CMAKE_AUTOMOC ON)
-        set(CMAKE_AUTORCC ON)
-        set(CMAKE_AUTOUIC ON)
-
         set(ROCK_QT_VERSION 5)
     endif()
 endmacro()
