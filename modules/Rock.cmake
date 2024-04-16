@@ -373,6 +373,96 @@ macro (rock_add_plain_dependency VARIABLE)
 endmacro()
 
 ## Common parsing of parameters for all the C/C++ target types
+#
+#
+# rock_target_definition (and rock_target_setup) are designed for use
+# inside this module only. This documentation aims to describe their effects
+# on variables and cmake structures.
+#
+# rock_target_definition takes a target name and a list of sources, headers,
+# dependencies and options. Parts of the effects are realized later by
+# rock_target_setup.
+#
+# It knows about SOURCES, HEADERS, MOC, UI, EXPORT, DEPS, DEPS_PKGCONFIG,
+# DEPS_CMAKE, DEPS_PLAIN, DEPS_TARGET, LIBS for switches that change how
+# arguments are used. This starts out to populate SOURCES.
+# It knows about USE_BINARY_DIR, NOINSTALL, LANG_C as
+# options that do not change the interpretation of the arguments
+#
+# arguments after SOURCES, HEADERS, MOC, UI, DEPS, EXPORT can be found in
+# ${target}_... variables.
+#
+# arguments after DEPS_TARGET, DEPS_CMAKE, DEPS_PKGCONFIG, DEPS_PLAIN can be
+# found in ${target}_... variables.
+# They also end up in ${target}_PUBLIC_TARGET, ${target}_PUBLIC_CMAKE,
+# ${target}_PUBLIC_PKGCONFIG, ${target}_PUBLIC_PLAIN if not defined otherwise.
+#
+# arguments after LIBS can be found in ${target}_DEPENDENT_LIBS.
+#
+# USE_BINARY_DIR sets ${target}_USE_BINARY_DIR ON. The effect is that the
+#     targets binary dir is added to the various include paths.
+# NOINSTALL sets ${target}_INSTALL OFF. The effect is that the library
+#     (and headers, pkgconfig-file?) are not installed.
+# LANG_C sets ${target}_LANG_C TRUE. The current effect is that
+#     "-Wnon-virtual-dtor" is not added to the targets flags.
+#
+# SOURCES:
+#     These files are added as sources to the target
+# HEADERS:
+#     These files are installed in the default include location.
+# MOC, UI:
+#     These files are fed to QTs moc and uic, the results added as sources
+#     to the target.
+# EXPORT:
+#     This single(!) name is gives the export name for use with
+#     install(TARGETS ${target} ... EXPORT ${name}). The export file is not
+#     installed automatically.
+# DEPS:
+#     Gets added to target_link_libraries. All direct/indirect dependencies
+#     (PLAIN, CMAKE, PKGCONFIG, TARGET) are added as well.
+# DEPS_TARGET: gets added to target_link_libraries
+#     The actual libraries, include and link directories are added to the
+#     targets pkgconfig file PKGCONFIG_LIBS from ${name}_LIBRARIES,
+#     PKGCONFIG_CFLAGS from ${name}_CFLAGS_OTHER and ${name}_INCLUDE_DIRS,
+#     if ${name} is also in PUBLIC_TARGET
+# DEPS_PKGCONFIG:
+#     gets added to target_link_libraries, using the
+#     ${name}_PKGCONFIG_LIBRARIES variable.
+#     ${name}_PKGCONFIG_LIBRARIES names are resolved to full names using
+#     find_library.
+#     ${name}_PKGCONFIG_LIBRARIES gets augmented by
+#     ${name}_PKGCONFIG_LDFLAGS_OTHER
+#     Automatically looks for the package using
+#     pkg_check_modules(${name}_PKGCONFIG REQUIRED ${name})
+#     ${name}_PKGCONFIG_CFLAGS_OTHER are added to target_definitions,
+#     target_compile_options, target_compile_features,
+#     target_include_directories as appropriate.
+#     The pkgconfig name is also added to the targets pkgconfig file
+#     PKGCONFIG_REQUIRES, if the packages ends up as part of PUBLIC_PKGCONFIG
+# DEPS_CMAKE:
+#     Gets added to target_link_libraries, both normal case and UPPER CASE
+#     variants, using the ${name}_LIBRARY and ${name}_LIBRARIES variables.
+#     Automatically looks for the package using find_package(${name} REQUIRED).
+#     Else like DEPS_PLAIN.
+# DEPS_PLAIN:
+#     Gets added to target_link_libraries using ${name}_LIBRARIES and
+#     ${name}_LIBRARY variables
+#     Variables are added for ${name}_CFLAGS ${name}_INCLUDE_DIRS
+#     ${name}_INCLUDE_DIR ${name}_LIBRARY_DIRS ${name}_LIBRARY_DIR
+#     ${name}_LIBRARIES if they don't exist and an UPPERCASE ${name} variant
+#     does.
+#     The ${name}_INCLUDE_DIRS and ${name}_LIBRARY_DIRS variables are populated
+#     from ${name}_INCLUDE_DIR and ${name}_LIBRARY_DIR if they don't exist
+#     ${name}_CFLAGS are added to target_definitions, target_compile_options,
+#     target_compile_features, target_include_directories as appropriate.
+#     targets pkgconfig file PKGCONFIG_LIBS is populated from
+#     ${name}_LIBRARIES, PKGCONFIG_CFLAGS from ${name}_CFLAGS_OTHER and
+#     ${name}_INCLUDE_DIRS, if the ${name} is in PUBLIC_CMAKE or PUBLIC_PLAIN
+# LIBS:
+#     Gets added to target_link_libraries
+#     Different to DEPS_TARGET, these are not added to dependent libraries
+#     through DEPS.
+#
 macro(rock_target_definition TARGET_NAME)
     set(${TARGET_NAME}_INSTALL ON)
     set(${TARGET_NAME}_USE_BINARY_DIR OFF)
@@ -695,9 +785,9 @@ endmacro()
 # DEPS_TARGET: lists the CMake imported targets which should be used for this
 # target. The targets must have been found already using e.g. `find_package`
 # DEPS_CMAKE: list of packages which can be found with CMake's find_package,
-# that the library depends upon using old-style variable passing. Use
-# DEPS_TARGET for imported targets. It is assumed that the Find*.cmake scripts
-# follow the cmake accepted standard for variable naming
+# that the library depends upon using old-style variable passing.
+# Use DEPS_TARGET for imported targets. It is assumed that the Find*.cmake
+# scripts follow the cmake accepted standard for variable naming
 # MOC: if the library is Qt-based, this is a list of either source or header
 # files of classes that need to be passed through Qt's moc compiler.  If headers
 # are listed, these headers should be processed by moc, with the resulting
