@@ -231,7 +231,8 @@ macro(rock_standard_layout)
                 add_subdirectory(viz)
             else()
                 pkg_check_modules(vizkit3d vizkit3d)
-                if (vizkit3d_FOUND)
+                pkg_check_modules(vizkit3d-qt5 vizkit3d-qt5)
+                if (vizkit3d_FOUND OR vizkit3d-qt5_FOUND)
                     message(STATUS "vizkit3d found ... building the vizkit3d plugin")
                     rock_add_source_dir(viz vizkit3d)
                 else()
@@ -410,11 +411,14 @@ endmacro()
 #     These files are added as sources to the target
 # HEADERS:
 #     These files are installed in the default include location.
-# MOC, UI:
-#     These files are fed to QTs moc and uic, the results added as sources
-#     to the target.
+# MOC, UI, MOC5, UI5:
+#     These files are fed to QTs moc and uic using QT*_WRAP_*, the results
+#     added as sources to the target. The CMAKE_CURRENT_BINARY_DIR is
+#     temporarily changed so the temporary files do not overwrite each other
+#     for the same source file. When MOC or UI is used, but only rock_find_qt5
+#     has ever been called, they are automatically converted to MOC5 or UI5.
 # EXPORT:
-#     This single(!) name is gives the export name for use with
+#     This single(!) name gives the export name for use with
 #     install(TARGETS ${target} ... EXPORT ${name}). The export file is not
 #     installed automatically.
 # DEPS:
@@ -466,7 +470,7 @@ endmacro()
 macro(rock_target_definition TARGET_NAME)
     set(${TARGET_NAME}_INSTALL ON)
     set(${TARGET_NAME}_USE_BINARY_DIR OFF)
-    set(ROCK_TARGET_AVAILABLE_MODES "SOURCES;HEADERS;DEPS;DEPS_PKGCONFIG;DEPS_CMAKE;DEPS_PLAIN;DEPS_TARGET;MOC;UI;LIBS")
+    set(ROCK_TARGET_AVAILABLE_MODES "SOURCES;HEADERS;DEPS;DEPS_PKGCONFIG;DEPS_CMAKE;DEPS_PLAIN;DEPS_TARGET;MOC;MOC5;UI;UI5;LIBS")
 
     set(${TARGET_NAME}_MODE "SOURCES")
     foreach(ELEMENT ${ARGN})
@@ -562,9 +566,17 @@ macro(rock_target_definition TARGET_NAME)
     endforeach()
 
     list(LENGTH ${TARGET_NAME}_MOC QT_MOC_LENGTH)
+    list(LENGTH ${TARGET_NAME}_MOC5 QT_MOC5_LENGTH)
+    if ((QT_MOC_LENGTH GREATER 0) AND (DEFINED ROCK_QT_VERSION_5) AND (NOT DEFINED ROCK_QT_VERSION_4) AND (QT_MOC5_LENGTH EQUAL 0))
+        message(WARNING "you are requesting moc generation for Qt4 using the MOC keyword but used rock_find_qt5 to find qt. We are assuming here that you wanted to use the qt5 moc (MOC5 keyword) instead of the qt4 moc")
+        set(QT_MOC5_LENGTH QT_MOC_LENGTH)
+        set(${TARGET_NAME}_MOC5 ${TARGET_NAME}_MOC)
+        set(${TARGET_NAME}_MOC)
+        set(QT_MOC_LENGTH 0)
+    endif()
     if (QT_MOC_LENGTH GREATER 0)
         if(NOT DEFINED ROCK_QT_VERSION)
-            message(WARNING "you are requesting moc generation, but did not call rock_find_qt4() or rock_find_qt5(). Explicitely add rock_find_qt4() or rock_find_qt5() in your root CMakeLists.txt, just before calling rock_standard_layout()")
+            message(WARNING "you are requesting moc generation, but did not call rock_find_qt4(). Explicitely add rock_find_qt4() in your root CMakeLists.txt, just before calling rock_standard_layout()")
             rock_find_qt4()
         endif()
 
@@ -597,26 +609,94 @@ macro(rock_target_definition TARGET_NAME)
             list(APPEND ${TARGET_NAME}_MOC ${__moced_file})
         endforeach()
 
-        if (ROCK_QT_VERSION EQUAL 5)
-            QT5_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC} TARGET ${TARGET_NAME})
-        else()
-            QT4_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC} TARGET ${TARGET_NAME})
-        endif()
+        # move CMAKE_CURRENT_BINARY_DIR away so it does not collide with qt5
+        set(__save_bin_dir ${CMAKE_CURRENT_BINARY_DIR})
+        set(CMAKE_CURRENT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt4")
+        QT4_WRAP_CPP(${TARGET_NAME}_MOC_SRCS ${${TARGET_NAME}_MOC} TARGET ${TARGET_NAME})
+        set(CMAKE_CURRENT_BINARY_DIR ${__save_bin_dir})
         list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_MOC_SRCS})
     endif()
 
-    list(LENGTH ${TARGET_NAME}_UI QT_UI_LENGTH)
-    if (QT_UI_LENGTH GREATER 0)
-        if (ROCK_QT_VERSION EQUAL 5)
-            QT5_WRAP_UI(${TARGET_NAME}_UI_HDRS ${${TARGET_NAME}_UI})
-        else()
-            QT4_WRAP_UI(${TARGET_NAME}_UI_HDRS ${${TARGET_NAME}_UI})
+    if (QT_MOC5_LENGTH GREATER 0)
+        if(NOT DEFINED ROCK_QT_VERSION)
+            message(WARNING "you are requesting moc generation, but did not call rock_find_qt5(). Explicitely add rock_find_qt5() in your root CMakeLists.txt, just before calling rock_standard_layout()")
+            rock_find_qt5()
         endif()
+
+        list(APPEND ${TARGET_NAME}_DEPENDENT_LIBS Qt5::Core Qt5::Gui)
+
+        set(__${TARGET_NAME}_MOC5 "${${TARGET_NAME}_MOC5}")
+        set(${TARGET_NAME}_MOC5 "")
+
+        set(__cpp_extensions ".c" ".cpp" ".cxx" ".cc")
+
+        # If a source file (*.c*) is listed in MOC5, add it to the list of
+        # sources and moc the corresponding header
+        foreach(__moced_file ${__${TARGET_NAME}_MOC5})
+            get_filename_component(__file_ext ${__moced_file} EXT)
+            list(FIND __cpp_extensions "${__file_ext}" __file_is_source)
+            if (__file_is_source GREATER -1)
+                list(APPEND ${TARGET_NAME}_SOURCES ${__moced_file})
+                get_filename_component(__file_wext ${__moced_file} NAME_WE)
+                get_filename_component(__file_dir ${__moced_file} PATH)
+                if (NOT "${__file_dir}" STREQUAL "")
+                    set(__file_wext "${__file_dir}/${__file_wext}")
+                endif()
+                unset(__moced_file)
+                foreach(__header_ext .h .hh .hxx .hpp)
+                    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${__file_wext}${__header_ext}")
+                        set(__moced_file "${__file_wext}${__header_ext}")
+                    endif()
+                endforeach()
+            endif()
+            list(APPEND ${TARGET_NAME}_MOC5 ${__moced_file})
+        endforeach()
+
+        # move CMAKE_CURRENT_BINARY_DIR away so it does not collide with qt4
+        set(__save_bin_dir ${CMAKE_CURRENT_BINARY_DIR})
+        set(CMAKE_CURRENT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt5")
+        QT5_WRAP_CPP(${TARGET_NAME}_MOC5_SRCS ${${TARGET_NAME}_MOC5} TARGET ${TARGET_NAME})
+        set(CMAKE_CURRENT_BINARY_DIR ${__save_bin_dir})
+        list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_MOC5_SRCS})
+    endif()
+
+    list(LENGTH ${TARGET_NAME}_UI QT_UI_LENGTH)
+    list(LENGTH ${TARGET_NAME}_UI5 QT_UI5_LENGTH)
+    if ((QT_UI_LENGTH GREATER 0) AND (DEFINED ROCK_QT_VERSION_5) AND (NOT DEFINED ROCK_QT_VERSION_4) AND (QT_UI5_LENGTH EQUAL 0))
+        message(WARNING "you are requesting ui generation for Qt5 using the UI keyword but used rock_find_qt5 to find qt. We are assuming here that you wanted to use the qt5 ui (UI5 keyword) instead of the qt4 ui")
+        set(QT_UI5_LENGTH QT_UI_LENGTH)
+        set(${TARGET_NAME}_UI5 ${TARGET_NAME}_UI)
+        set(${TARGET_NAME}_UI)
+        set(QT_UI_LENGTH 0)
+    endif()
+    if (QT_UI_LENGTH GREATER 0)
+        # move CMAKE_CURRENT_BINARY_DIR away so it does not collide with qt5
+        set(__save_bin_dir ${CMAKE_CURRENT_BINARY_DIR})
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt4")
+        set(CMAKE_CURRENT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt4")
+        QT4_WRAP_UI(${TARGET_NAME}_UI_HDRS ${${TARGET_NAME}_UI})
+        set(CMAKE_CURRENT_BINARY_DIR ${__save_bin_dir})
+
         message(DEBUG ${${TARGET_NAME}_UI_HDRS})
         if (NOT ROCK_FEATURE_NOCURDIR)
-            include_directories(${CMAKE_CURRENT_BINARY_DIR})
+            include_directories(${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt4)
         endif()
         list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_UI_HDRS})
+    endif()
+
+    if (QT_UI5_LENGTH GREATER 0)
+        # move CMAKE_CURRENT_BINARY_DIR away so it does not collide with qt4
+        set(__save_bin_dir ${CMAKE_CURRENT_BINARY_DIR})
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt5")
+        set(CMAKE_CURRENT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt5")
+        QT5_WRAP_UI(${TARGET_NAME}_UI5_HDRS ${${TARGET_NAME}_UI5})
+        set(CMAKE_CURRENT_BINARY_DIR ${__save_bin_dir})
+
+        message(DEBUG ${${TARGET_NAME}_UI5_HDRS})
+        if (NOT ROCK_FEATURE_NOCURDIR)
+            include_directories(${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt5)
+        endif()
+        list(APPEND ${TARGET_NAME}_SOURCES ${${TARGET_NAME}_UI5_HDRS})
     endif()
 endmacro()
 
@@ -749,7 +829,11 @@ macro(rock_target_setup TARGET_NAME)
         endforeach()
         list(LENGTH ${TARGET_NAME}_UI QT_UI_LENGTH)
         if (QT_UI_LENGTH GREATER 0)
-            target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+            target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt4)
+        endif()
+        list(LENGTH ${TARGET_NAME}_UI5 QT_UI5_LENGTH)
+        if (QT_UI5_LENGTH GREATER 0)
+            target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt5)
         endif()
     endif()
     target_compile_features(${TARGET_NAME} PUBLIC ${ROCK_COMPILE_FEATURES})
@@ -765,7 +849,9 @@ endmacro()
 #     [DEPS_TARGET target1 target2 target3]
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [MOC qtsource1.hpp qtsource2.hpp])
+#     [MOC5 qtsource1.hpp qtsource2.hpp])
 #     [UI qt_window.ui qt_widget.ui]
+#     [UI5 qt_window.ui qt_widget.ui]
 #     [LANG_C]
 #
 # Creates a C++ executable and (optionally) installs it
@@ -794,8 +880,10 @@ endmacro()
 # implementation files are built into the library. If they are source files,
 # they get added to the library and the corresponding header file is passed to
 # moc.
+# MOC5: same as MOC, but for Qt5 instead of Qt4
 # UI: if the library is Qt-based, a list of ui files (only active if moc files are
 # present)
+# UI5: same as UI, but for Qt5 instead of Qt4
 # LANG_C: use this if the code is written in C
 
 function(rock_executable TARGET_NAME)
@@ -882,7 +970,9 @@ endfunction()
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [HEADERS header1.hpp header2.hpp header3.hpp ...]
 #     [MOC qtsource1.hpp qtsource2.hpp]
+#     [MOC5 qtsource1.hpp qtsource2.hpp]
 #     [UI qt_window.ui qt_widget.ui]
+#     [UI5 qt_window.ui qt_widget.ui]
 #     [NOINSTALL]
 #     [LANG_C])
 #
@@ -916,8 +1006,10 @@ endfunction()
 # resulting implementation files are built into the library. If they are source
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
+# MOC5: same as MOC, but for Qt5 instead of Qt4
 # UI: if the library is Qt-based, a list of ui files (only active if moc files are
 # present)
+# UI5: same as UI, but for Qt5 instead of Qt4
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 # LANG_C: use this if the library is written in C to avoid the use of unsupported
@@ -970,13 +1062,15 @@ endfunction()
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [HEADERS header1.hpp header2.hpp header3.hpp ...]
 #     [MOC qtsource1.hpp qtsource2.hpp]
+#     [MOC5 qtsource1.hpp qtsource2.hpp]
 #     [NOINSTALL])
 #
 # Creates and (optionally) installs a shared library that defines a vizkit3d
 # plugin. In Rock, vizkit3d is the base for data display. Vizkit plugins are
 # plugins to the 3D display in vizkit3d.
 #
-# By convention, <name> should end in "-viz"
+# By convention, <name> should end in "-viz" for qt4 plugins and in "-viz-qt5"
+# for their qt5 based counterpart.
 #
 # The library gets linked against the vizkit3d libraries automatically (no
 # need to list them in DEPS_PKGCONFIG). Moreoer, unlike with a normal shared
@@ -1004,13 +1098,32 @@ endfunction()
 # resulting implementation files are built into the library. If they are source
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
+# MOC5: same as MOC, but for Qt5 instead of Qt4
 # NOINSTALL: by default, the library gets installed on 'make install'. If this
 # argument is given, this is turned off
 function(rock_vizkit_plugin TARGET_NAME)
     if (${PROJECT_NAME} STREQUAL "vizkit3d")
         # vizkit3d provides the library and uses its own target
     else()
-        list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
+        if ((DEFINED ROCK_QT_VERSION_5) AND (NOT DEFINED ROCK_QT_VERSION_4))
+            message(WARNING "You are using the qt4 rock_vizkit_plugin instead "
+                "of rock_vizkit_plugin_qt5 while only having looked for qt "
+                "using rock_find_qt5. Rock.cmake will assume you wanted to "
+                "build a qt5 vizkit widget. Please use "
+                "rock_vizkit_plugin_qt5, suffix the library with an "
+                "additional -qt5 and adjust the .pc file accordingly. Better "
+                "yet, add rock_feature(NOCURDIR) before rock_standard_layout, "
+                "best just after rock_init, add rock_find_qt4(), and "
+                "duplicate your rock_vizkit_plugin call for qt4 and qt5, "
+                "suffixing the qt5 target with -qt5 as mentioned before.")
+            if(vizkit3d-qt5_FOUND)
+                list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d-qt5)
+            else()
+                list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
+            endif()
+        else()
+            list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d)
+        endif()
     endif()
     rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
     if (${TARGET_NAME}_INSTALL)
@@ -1027,6 +1140,72 @@ function(rock_vizkit_plugin TARGET_NAME)
     endif()
 endfunction()
 
+## Defines a new vizkit3d plugin
+#
+# rock_vizkit_plugin_qt5(name
+#     SOURCES source.cpp source1.cpp ...
+#     [DEPS target1 target2 target3]
+#     [DEPS_PKGCONFIG pkg1 pkg2 pkg3]
+#     [DEPS_TARGET target1 target2 target3]
+#     [DEPS_CMAKE pkg1 pkg2 pkg3]
+#     [HEADERS header1.hpp header2.hpp header3.hpp ...]
+#     [MOC qtsource1.hpp qtsource2.hpp]
+#     [MOC5 qtsource1.hpp qtsource2.hpp]
+#     [NOINSTALL])
+#
+# Creates and (optionally) installs a shared library that defines a vizkit3d
+# plugin. In Rock, vizkit3d is the base for data display. Vizkit plugins are
+# plugins to the 3D display in vizkit3d.
+#
+# By convention, <name> should end in "-viz" for qt4 plugins and in "-viz-qt5"
+# for their qt5 based counterpart.
+#
+# The library gets linked against the vizkit3d libraries automatically (no
+# need to list them in DEPS_PKGCONFIG). Moreoer, unlike with a normal shared
+# library, the headers get installed in include/vizkit3d
+#
+# The following arguments are mandatory:
+#
+# SOURCES: list of the C++ sources that should be built into that library
+#
+# The following optional arguments are available:
+#
+# DEPS: lists the other targets from this CMake project against which the
+# library should be linked
+# DEPS_PKGCONFIG: list of pkg-config packages that the library depends upon. The
+# necessary link and compilation flags are added
+# DEPS_TARGET: lists the CMake imported targets which should be used for this
+# target. The targets must have been found already using e.g. `find_package`
+# DEPS_CMAKE: list of packages which can be found with CMake's find_package,
+# that the library depends upon. It is assumed that the Find*.cmake scripts
+# follow the cmake accepted standard for variable naming
+# HEADERS: a list of headers that should be installed with the library. They get
+# installed in include/project_name
+# MOC: if the library is Qt-based, a list of either source or header files.
+# If headers are listed, these headers should be processed by moc, with the
+# resulting implementation files are built into the library. If they are source
+# files, they get added to the library and the corresponding header file is
+# passed to moc.
+# MOC5: same as MOC, but for Qt5 instead of Qt4
+# NOINSTALL: by default, the library gets installed on 'make install'. If this
+# argument is given, this is turned off
+function(rock_vizkit_plugin_qt5 TARGET_NAME)
+    if (${PROJECT_NAME} STREQUAL "vizkit3d")
+        # vizkit3d provides the library and uses its own target
+    else()
+        list(APPEND additional_deps DEPS_PKGCONFIG vizkit3d-qt5)
+    endif()
+    rock_library_common(${TARGET_NAME} ${ARGN} ${additional_deps})
+    if (${TARGET_NAME}_INSTALL)
+        if (${TARGET_NAME}_LIBRARY_HAS_TARGET)
+            install(TARGETS ${TARGET_NAME}
+                LIBRARY DESTINATION lib)
+        endif()
+        install(FILES ${${TARGET_NAME}_HEADERS}
+            DESTINATION include/vizkit3d)
+    endif()
+endfunction()
+
 ## Defines a new vizkit widget
 #
 # rock_vizkit_widget(name
@@ -1037,6 +1216,7 @@ endfunction()
 #     [DEPS_CMAKE pkg1 pkg2 pkg3]
 #     [HEADERS header1.hpp header2.hpp header3.hpp ...]
 #     [MOC qtsource1.hpp qtsource2.hpp]
+#     [MOC5 qtsource1.hpp qtsource2.hpp]
 #     [NOINSTALL])
 #
 # Creates and (optionally) installs a shared library that defines a vizkit
@@ -1061,6 +1241,7 @@ endfunction()
 # resulting implementation files are built into the library. If they are source
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
+# MOC5: same as MOC, but for Qt5 instead of Qt4
 #
 # The following optional arguments are available:
 #
@@ -1126,6 +1307,7 @@ endfunction()
 # resulting implementation files are built into the library. If they are source
 # files, they get added to the library and the corresponding header file is
 # passed to moc.
+# MOC5: same as MOC, but for Qt5 instead of Qt4
 function(rock_testsuite TARGET_NAME)
     rock_test_common(${TARGET_NAME} ${ARGN})
     rock_setup_boost_test(${TARGET_NAME})
@@ -1484,9 +1666,15 @@ macro (rock_find_qt4)
     if (NOT ROCK_FEATURE_NOCURDIR)
         include_directories(${QT_HEADERS_DIR})
     endif()
+    if ((NOT ROCK_FEATURE_NOCURDIR) AND ROCK_QT_VERSION_5)
+        message(FATAL_ERROR "rock_find_qt5 has already been used. Without rock_feature(NOCURDIR), rock_find_qt4"
+                " will introduce incompatible definitions and paths into this directory(${CMAKE_CURRENT_SOURCE_DIR})."
+                )
+    endif()
 
     if(Qt4_FOUND)
         set(ROCK_QT_VERSION 4)
+        set(ROCK_QT_VERSION_4 ON)
 
         foreach(__qtmodule__ QtCore QtGui QtOpenGl ${ARGN})
             string(TOUPPER ${__qtmodule__} __qtmodule__)
@@ -1510,6 +1698,11 @@ endmacro()
 # The argument list can also contain OPTIONAL or REQUIRED, default is to
 # assume REQUIRED.
 macro (rock_find_qt5)
+    if (ROCK_QT_VERSION_4 AND (NOT ROCK_FEATURE_NOCURDIR))
+        message(FATAL_ERROR "rock_find_qt4 has already been used without rock_feature(NOCURDIR)."
+                " This introduces incompatible definitions and paths into this directory(${CMAKE_CURRENT_SOURCE_DIR})."
+                )
+    endif()
     set(__arglist "${ARGN}")
     list(FIND __arglist OPTIONAL __arg_optional)
     list(FIND __arglist REQUIRED __arg_requried)
@@ -1524,6 +1717,7 @@ macro (rock_find_qt5)
     find_package(Qt5 ${__arg_optreq} COMPONENTS Core Gui Widgets OpenGL ${__arglist})
     if(Qt5_FOUND)
         set(ROCK_QT_VERSION 5)
+        set(ROCK_QT_VERSION_5 ON)
     endif()
 endmacro()
 
