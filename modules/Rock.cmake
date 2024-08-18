@@ -131,6 +131,11 @@ at toplevel, like this:\
     rock_add_compiler_flag_if_it_exists(-Wall)
     rock_add_compiler_flag_if_it_exists(-Wno-unused-local-typedefs)
     add_definitions(-DBASE_LOG_NAMESPACE=${PROJECT_NAME})
+    set(ROCK_USE_SANITIZERS "" CACHE STRING "C/C++ sanitizers to use (compiler specific)")
+    if (ROCK_USE_SANITIZERS)
+        add_compile_options("-fsanitize=${ROCK_USE_SANITIZERS}")
+        add_link_options("-fsanitize=${ROCK_USE_SANITIZERS}")
+    endif()
 
     if (ROCK_TEST_ENABLED)
         enable_testing()
@@ -836,6 +841,7 @@ macro(rock_target_setup TARGET_NAME)
             target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}-${TARGET_NAME}-qt5)
         endif()
     endif()
+
     target_compile_features(${TARGET_NAME} PUBLIC ${ROCK_COMPILE_FEATURES})
 endmacro()
 
