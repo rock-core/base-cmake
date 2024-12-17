@@ -137,8 +137,18 @@ at toplevel, like this:\
         add_link_options("-fsanitize=${ROCK_USE_SANITIZERS}")
     endif()
 
+    option(ROCK_TEST_CXX_LCOV_GENERATION "Generate lcov reports after test runs")
     if (ROCK_TEST_ENABLED)
         enable_testing()
+    endif()
+
+    option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_LCOV_GENERATION is set)")
+    if (ROCK_TEST_CXX_LCOV_GENERATION AND NOT ROCK_CXX_GCOV_ENABLED)
+        message(FATAL_ERROR "ROCK_TEST_CXX_LCOV_GENERATION needs ROCK_CXX_GCOV_ENABLED")
+    endif()
+
+    if (ROCK_CXX_GCOV_ENABLED)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-abs-path")
     endif()
 
     set(ROCK_INIT_DONE ON)
