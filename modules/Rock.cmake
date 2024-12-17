@@ -137,18 +137,23 @@ at toplevel, like this:\
         add_link_options("-fsanitize=${ROCK_USE_SANITIZERS}")
     endif()
 
-    option(ROCK_TEST_CXX_LCOV_GENERATION "Generate lcov reports after test runs")
     if (ROCK_TEST_ENABLED)
         enable_testing()
     endif()
 
-    option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_LCOV_GENERATION is set)")
-    if (ROCK_TEST_CXX_LCOV_GENERATION AND NOT ROCK_CXX_GCOV_ENABLED)
-        message(FATAL_ERROR "ROCK_TEST_CXX_LCOV_GENERATION needs ROCK_CXX_GCOV_ENABLED")
+    option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_GCOV_GENERATION is set)")
+    if (ROCK_TEST_CXX_GCOVR_GENERATION AND NOT ROCK_CXX_GCOV_ENABLED)
+        message(FATAL_ERROR "ROCK_TEST_CXX_GCOVR_GENERATION needs ROCK_CXX_GCOV_ENABLED")
     endif()
-
+    
     if (ROCK_CXX_GCOV_ENABLED)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-abs-path")
+    endif()
+    
+    option(ROCK_TEST_CXX_GCOVR_GENERATION "Generate gcovr reports after test runs")
+    if (ROCK_TEST_ENABLED AND ROCK_TEST_CXX_GCOVR_GENERATION)
+        enable_testing()
+        rock_coverage_report_generation(${PROJECT_NAME})
     endif()
 
     set(ROCK_INIT_DONE ON)
@@ -1360,6 +1365,35 @@ function(rock_gtest TARGET_NAME)
 
     rock_setup_gtest_test(${TARGET_NAME} ${GMOCK_DIR} ${GTEST_DIR})
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
+endfunction()
+
+function(rock_coverage_report_generation TARGET_NAME)
+    message(STATUS "Generating report for ${TARGET_NAME} package")
+    find_program(
+        gcovr_exec NAMES
+        ${ROCK_GCOVR_EXECUTABLE} gcovr
+    )
+    if (NOT gcovr_exec)
+        message(FATAL_ERROR "Could not find an executable for gcovr.")
+    endif()
+
+    set(gcovr_config_option "--filter ${PROJECT_BINARY_DIR}/src/ -html -o ${PROJECT_BINARY_DIR}/coverage.html")
+    if(${ROCK_COVERAGE_REPORT_PATH})
+        message(warning "setting an explicit config path coverage report")
+        set(gcovr_config_option "--filter ${PROJECT_BINARY_DIR}/src/ -html -o ${ROCK_COVERAGE_REPORT_PATH}/coverage.html")
+    endif()
+
+    if(SONARQUBE_ENABLED)
+        list(APPEND gcovr_config_option "--sonarqube -o sonarcube_coverage_report")
+    endif()
+
+    add_test(
+        NAME
+        report_generation
+        COMMAND
+        ${gcovr_exec}
+        ${gcovr_config_option}
+    )
 endfunction()
 
 function(rock_get_clang_targets VAR filepath)
