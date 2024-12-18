@@ -1379,11 +1379,11 @@ function(rock_coverage_report_generation TARGET_NAME)
 
     set(gcovr_config_option "--filter ${PROJECT_BINARY_DIR}/src/ -html -o ${PROJECT_BINARY_DIR}/coverage.html")
     if(${ROCK_COVERAGE_REPORT_PATH})
-        message(warning "setting an explicit config path coverage report")
+        message(warning "Setting an explicit config path coverage report")
         set(gcovr_config_option "--filter ${PROJECT_BINARY_DIR}/src/ -html -o ${ROCK_COVERAGE_REPORT_PATH}/coverage.html")
     endif()
 
-    if(SONARQUBE_ENABLED)
+    if(ROCK_TEST_CXX_SONARQUBE_COVERAGE_ENABLED AND ROCK_TEST_CXX_GCOVR_GENERATION)
         list(APPEND gcovr_config_option "--sonarqube -o sonarcube_coverage_report")
     endif()
 
