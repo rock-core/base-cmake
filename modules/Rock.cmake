@@ -143,7 +143,10 @@ at toplevel, like this:\
 
     option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_GCOV_GENERATION is set)" ON)
     if (ROCK_CXX_GCOV_ENABLED)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-abs-path")
+        add_compile_options("--coverage")
+        add_link_options("--coverage")
+        add_compile_options("-fprofile-abs-path")
+        add_link_options("-fprofile-abs-path")
     endif()
 
     set(ROCK_INIT_DONE ON)
