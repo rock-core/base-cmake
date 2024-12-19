@@ -141,7 +141,10 @@ at toplevel, like this:\
         enable_testing()
     endif()
 
-
+    option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_GCOV_GENERATION is set)" ON)
+    if (ROCK_CXX_GCOV_ENABLED)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-abs-path")
+    endif()
 
     set(ROCK_INIT_DONE ON)
 endmacro()
@@ -314,7 +317,6 @@ macro(rock_standard_layout)
         rock_setup_linting_check(${PROJECT_NAME} ${source_and_test_files})
     endif()
 
-    option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_GCOV_GENERATION is set)" OFF)
     option(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED "Generate gcovr reports after test runs" OFF)
     option(ROCK_TEST_CXX_SONARQUBE_REPORTS_ENABLED "Generate gcovr reports for sonarqube after test runs" OFF)
 
@@ -322,11 +324,6 @@ macro(rock_standard_layout)
         message(FATAL_ERROR "ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED needs ROCK_CXX_GCOV_ENABLED")
     endif()
 
-    if (ROCK_CXX_GCOV_ENABLED)
-        enable_testing()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-abs-path")
-    endif()
-    
     if (ROCK_TEST_ENABLED AND ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
         enable_testing()
         rock_coverage_report_generation(${PROJECT_NAME})
@@ -1382,10 +1379,10 @@ function(rock_coverage_report_generation TARGET_NAME)
         message(FATAL_ERROR "Could not find an executable for gcovr.")
     endif()
 
-    set(gcovr_config_option --filter ${PROJECT_BINARY_DIR}/src/ --html -o ${PROJECT_BINARY_DIR}/coverage.html)
+    set(gcovr_config_option --filter ${PROJECT_SOURCE_DIR}/src/ --html -o ${PROJECT_SOURCE_DIR}/coverage.html)
     if(${ROCK_COVERAGE_REPORT_PATH})
         message(warning "Setting an explicit config path coverage report")
-        set(gcovr_config_option --filter ${PROJECT_BINARY_DIR}/src/ --html -o ${ROCK_COVERAGE_REPORT_PATH}/coverage.html)
+        set(gcovr_config_option --filter ${PROJECT_SOURCE_DIR}/src/ --html -o ${ROCK_COVERAGE_REPORT_PATH}/coverage.html)
     endif()
 
     if(ROCK_TEST_CXX_SONARQUBE_COVERAGE_ENABLED AND ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
