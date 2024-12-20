@@ -140,7 +140,7 @@ at toplevel, like this:\
     if (ROCK_TEST_ENABLED)
         enable_testing()
     endif()
-
+    
     option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_GCOV_GENERATION is set)" ON)
     if (ROCK_CXX_GCOV_ENABLED)
         add_compile_options("--coverage")
@@ -325,11 +325,6 @@ macro(rock_standard_layout)
 
     if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED AND NOT ROCK_CXX_GCOV_ENABLED)
         message(FATAL_ERROR "ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED needs ROCK_CXX_GCOV_ENABLED")
-    endif()
-
-    if (ROCK_TEST_ENABLED AND ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
-        enable_testing()
-        rock_coverage_report_generation(${PROJECT_NAME})
     endif()
 
     set(ROCK_STANDARD_LAYOUT_DONE ON)
@@ -1338,6 +1333,9 @@ function(rock_testsuite TARGET_NAME)
     rock_test_common(${TARGET_NAME} ${ARGN})
     rock_setup_boost_test(${TARGET_NAME})
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
+    if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
+        rock_coverage_report_generation(${PROJECT_NAME} ${TEST_TARGET_NAME})
+    endif()
 endfunction()
 
 ## Uses gtest + google-mock as unit testing framework
@@ -1370,9 +1368,12 @@ function(rock_gtest TARGET_NAME)
 
     rock_setup_gtest_test(${TARGET_NAME} ${GMOCK_DIR} ${GTEST_DIR})
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
+    if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
+        rock_coverage_report_generation(${PROJECT_NAME} ${TEST_TARGET_NAME})
+    endif()
 endfunction()
 
-function(rock_coverage_report_generation TARGET_NAME)
+function(rock_coverage_report_generation TARGET_NAME TEST_TARGET)
     message(STATUS "Generating report for ${TARGET_NAME} package")
     find_program(
         gcovr_exec NAMES
@@ -1394,11 +1395,12 @@ function(rock_coverage_report_generation TARGET_NAME)
 
     add_test(
         NAME
-        report_generation
+        ${TARGET_NAME}_report_generation
         COMMAND
         ${gcovr_exec}
         ${gcovr_config_option}
     )
+    set_tests_properties(${TARGET_NAME}_report_generation PROPERTIES DEPENDS ${TEST_TARGET})
 endfunction()
 
 function(rock_get_clang_targets VAR filepath)
@@ -1520,6 +1522,7 @@ function(rock_add_test TARGET_NAME __rock_test_parameters)
     add_test(NAME test-${TARGET_NAME}-cxx
              COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
              ${__rock_test_parameters})
+    set(TEST_TARGET_NAME "test-${TARGET_NAME}-cxx" PARENT_SCOPE)
 endfunction()
 
 ## Get the library name from a given path
