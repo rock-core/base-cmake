@@ -137,16 +137,16 @@ at toplevel, like this:\
         add_link_options("-fsanitize=${ROCK_USE_SANITIZERS}")
     endif()
 
-    if (ROCK_TEST_ENABLED)
-        enable_testing()
-    endif()
-    
     option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_GCOV_GENERATION is set)" ON)
     if (ROCK_CXX_GCOV_ENABLED)
         add_compile_options("--coverage")
         add_link_options("--coverage")
         add_compile_options("-fprofile-abs-path")
         add_link_options("-fprofile-abs-path")
+    endif()
+
+    if (ROCK_TEST_ENABLED)
+        enable_testing()
     endif()
 
     set(ROCK_INIT_DONE ON)
@@ -318,12 +318,6 @@ macro(rock_standard_layout)
     if (ROCK_CLANG_LINTING_CHECK_ENABLED)
         enable_testing()
         rock_setup_linting_check(${PROJECT_NAME} ${source_and_test_files})
-    endif()
-
-    option(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED "Generate gcovr reports after test runs" OFF)
-    if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
-        enable_testing()
-        rock_cxx_coverage_report(${PROJECT_NAME} DEPENDS ${ALL_TEST_TARGETS})
     endif()
 
     set(ROCK_STANDARD_LAYOUT_DONE ON)
@@ -1332,8 +1326,9 @@ function(rock_testsuite TARGET_NAME)
     rock_test_common(${TARGET_NAME} ${ARGN})
     rock_setup_boost_test(${TARGET_NAME})
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
-    list(APPEND ALL_TEST_TARGETS test-${TARGET_NAME}-cxx)
-    set(ALL_TEST_TARGETS "${ALL_TEST_TARGETS}" CACHE INTERNAL "ALL_TEST_TARGETS")
+    if(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
+        set_tests_properties(${PROJECT_NAME}_report_generation PROPERTIES DEPENDS test-${TARGET_NAME}-cxx)
+    endif()
 endfunction()
 
 ## Uses gtest + google-mock as unit testing framework
@@ -1366,8 +1361,9 @@ function(rock_gtest TARGET_NAME)
 
     rock_setup_gtest_test(${TARGET_NAME} ${GMOCK_DIR} ${GTEST_DIR})
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
-    list(APPEND ALL_TEST_TARGETS "test-${TARGET_NAME}-cxx")
-    set(ALL_TEST_TARGETS "${ALL_TEST_TARGETS}" CACHE INTERNAL "ALL_TEST_TARGETS")
+    if(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
+        set_tests_properties(${PROJECT_NAME}_report_generation PROPERTIES DEPENDS test-${TARGET_NAME}-cxx)
+    endif()
 endfunction()
 
 function(rock_cxx_coverage_report PROJECT_NAME)
@@ -1380,8 +1376,8 @@ function(rock_cxx_coverage_report PROJECT_NAME)
         message(FATAL_ERROR "Could not find an executable for gcovr.")
     endif()
 
-    if(${ROCK_COVERAGE_REPORT_PATH})
-        message(STATUS "Setting an explicit config path coverage report")
+    if(ROCK_COVERAGE_REPORT_PATH)
+        message(STATUS "Coverage report will be generated in ${ROCK_COVERAGE_REPORT_PATH}")
         set(gcovr_config_option --filter ${PROJECT_SOURCE_DIR}/src/ --html -o ${ROCK_COVERAGE_REPORT_PATH}/coverage.html)
     else()
         message(STATUS "Default coverage path set to /build")
@@ -1394,11 +1390,8 @@ function(rock_cxx_coverage_report PROJECT_NAME)
         COMMAND
         ${gcovr_exec}
         ${gcovr_config_option}
-        ${gcovr_extra_option}
+        ${ROCK_GCOVR_EXTRA_OPTIONS}
     )
-    foreach(target ${ALL_TEST_TARGETS})
-        set_tests_properties(${PROJECT_NAME}_report_generation PROPERTIES DEPENDS "${target}")
-    endforeach()
 endfunction()
 
 function(rock_get_clang_targets VAR filepath)
@@ -1493,6 +1486,11 @@ function(rock_test_common TARGET_NAME)
     if (TARGET_NAME STREQUAL "test")
         message(WARNING "test name cannot be 'test', renaming to '${PROJECT_NAME}-test'")
         set(TARGET_NAME "${PROJECT_NAME}-test")
+    endif()
+
+    option(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED "Generate gcovr reports after test runs" OFF)
+    if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
+        rock_cxx_coverage_report(${PROJECT_NAME})
     endif()
 
     rock_executable(${TARGET_NAME} ${ARGN} NOINSTALL)
