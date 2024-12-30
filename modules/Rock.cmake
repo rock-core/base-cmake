@@ -322,6 +322,7 @@ macro(rock_standard_layout)
 
     option(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED "Generate gcovr reports after test runs" OFF)
     if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
+        enable_testing()
         rock_cxx_coverage_report(${PROJECT_NAME} DEPENDS ${ALL_TEST_TARGETS})
     endif()
 
@@ -1395,6 +1396,9 @@ function(rock_cxx_coverage_report PROJECT_NAME)
         ${gcovr_config_option}
         ${gcovr_extra_option}
     )
+    foreach(target ${ALL_TEST_TARGETS})
+        set_tests_properties(${PROJECT_NAME}_report_generation PROPERTIES DEPENDS "${target}")
+    endforeach()
 endfunction()
 
 function(rock_get_clang_targets VAR filepath)
