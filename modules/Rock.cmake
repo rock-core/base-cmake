@@ -321,10 +321,8 @@ macro(rock_standard_layout)
     endif()
 
     option(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED "Generate gcovr reports after test runs" OFF)
-    option(ROCK_TEST_CXX_SONARQUBE_REPORTS_ENABLED "Generate gcovr reports for sonarqube after test runs" OFF)
-
-    if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED AND NOT ROCK_CXX_GCOV_ENABLED)
-        message(FATAL_ERROR "ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED needs ROCK_CXX_GCOV_ENABLED")
+    if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
+        rock_cxx_coverage_report(${PROJECT_NAME} DEPENDS ${ALL_TEST_TARGETS})
     endif()
 
     set(ROCK_STANDARD_LAYOUT_DONE ON)
@@ -1333,9 +1331,8 @@ function(rock_testsuite TARGET_NAME)
     rock_test_common(${TARGET_NAME} ${ARGN})
     rock_setup_boost_test(${TARGET_NAME})
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
-    if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
-        rock_coverage_report_generation(${PROJECT_NAME} ${TEST_TARGET_NAME})
-    endif()
+    list(APPEND ALL_TEST_TARGETS test-${TARGET_NAME}-cxx)
+    set(ALL_TEST_TARGETS "${ALL_TEST_TARGETS}" CACHE INTERNAL "ALL_TEST_TARGETS")
 endfunction()
 
 ## Uses gtest + google-mock as unit testing framework
@@ -1368,13 +1365,12 @@ function(rock_gtest TARGET_NAME)
 
     rock_setup_gtest_test(${TARGET_NAME} ${GMOCK_DIR} ${GTEST_DIR})
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
-    if (ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
-        rock_coverage_report_generation(${PROJECT_NAME} ${TEST_TARGET_NAME})
-    endif()
+    list(APPEND ALL_TEST_TARGETS "test-${TARGET_NAME}-cxx")
+    set(ALL_TEST_TARGETS "${ALL_TEST_TARGETS}" CACHE INTERNAL "ALL_TEST_TARGETS")
 endfunction()
 
-function(rock_coverage_report_generation TARGET_NAME TEST_TARGET)
-    message(STATUS "Generating report for ${TARGET_NAME} package")
+function(rock_cxx_coverage_report PROJECT_NAME)
+    message(STATUS "Generating report for ${PROJECT_NAME} package")
     find_program(
         gcovr_exec NAMES
         ${ROCK_GCOVR_EXECUTABLE} gcovr
@@ -1383,24 +1379,22 @@ function(rock_coverage_report_generation TARGET_NAME TEST_TARGET)
         message(FATAL_ERROR "Could not find an executable for gcovr.")
     endif()
 
-    set(gcovr_config_option --filter ${PROJECT_SOURCE_DIR}/src/ --html -o ${PROJECT_SOURCE_DIR}/coverage.html)
     if(${ROCK_COVERAGE_REPORT_PATH})
-        message(warning "Setting an explicit config path coverage report")
+        message(STATUS "Setting an explicit config path coverage report")
         set(gcovr_config_option --filter ${PROJECT_SOURCE_DIR}/src/ --html -o ${ROCK_COVERAGE_REPORT_PATH}/coverage.html)
-    endif()
-
-    if(ROCK_TEST_CXX_SONARQUBE_COVERAGE_ENABLED AND ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
-        list(APPEND gcovr_config_option --sonarqube -o sonarcube_coverage_report)
+    else()
+        message(STATUS "Default coverage path set to /build")
+        set(gcovr_config_option --filter ${PROJECT_SOURCE_DIR}/src/ --html -o ${PROJECT_BINARY_DIR}/coverage.html)
     endif()
 
     add_test(
         NAME
-        ${TARGET_NAME}_report_generation
+        ${PROJECT_NAME}_report_generation
         COMMAND
         ${gcovr_exec}
         ${gcovr_config_option}
+        ${gcovr_extra_option}
     )
-    set_tests_properties(${TARGET_NAME}_report_generation PROPERTIES DEPENDS ${TEST_TARGET})
 endfunction()
 
 function(rock_get_clang_targets VAR filepath)
@@ -1522,7 +1516,6 @@ function(rock_add_test TARGET_NAME __rock_test_parameters)
     add_test(NAME test-${TARGET_NAME}-cxx
              COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
              ${__rock_test_parameters})
-    set(TEST_TARGET_NAME "test-${TARGET_NAME}-cxx" PARENT_SCOPE)
 endfunction()
 
 ## Get the library name from a given path
