@@ -137,8 +137,8 @@ at toplevel, like this:\
         add_link_options("-fsanitize=${ROCK_USE_SANITIZERS}")
     endif()
 
-    option(ROCK_CXX_GCOV_ENABLED "Compile with coverage generation (enabled by default if ROCK_TEST_GCOV_GENERATION is set)" ON)
-    if (ROCK_CXX_GCOV_ENABLED)
+    option(ROCK_CXX_GCOVR_ENABLED "Compile with coverage generation (needs to be enabled if ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED is ON)" OFF)
+    if (ROCK_CXX_GCOVR_ENABLED)
         add_compile_options("--coverage")
         add_link_options("--coverage")
         add_compile_options("-fprofile-abs-path")
@@ -317,9 +317,11 @@ macro(rock_standard_layout)
 
     option(ROCK_CLANG_LINTING_CHECK_ENABLED
            "set to ON to linting check on test targets" OFF)
-    if (ROCK_CLANG_LINTING_CHECK_ENABLED)
+    if (ROCK_CLANG_LINTING_CHECK_ENABLED AND NOT ROCK_CXX_GCOVR_ENABLED)
         enable_testing()
         rock_setup_linting_check(${PROJECT_NAME} ${source_and_test_files})
+    elseif(ROCK_CLANG_LINTING_CHECK_ENABLED AND ROCK_CXX_GCOVR_ENABLED)
+        message(FATAL_ERROR "Clang-tidy (linting) cannot be enabled with GCOV")
     endif()
 
     set(ROCK_STANDARD_LAYOUT_DONE ON)
@@ -1511,7 +1513,7 @@ function(rock_add_test TARGET_NAME __rock_test_parameters)
              COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
              ${__rock_test_parameters})
 
-    if(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED)
+    if(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED AND ROCK_CXX_GCOVR_ENABLED)
         if(NOT TARGET ${PROJECT_NAME}_report_generation)
             rock_cxx_coverage_report(${PROJECT_NAME})
         endif()
@@ -1521,6 +1523,8 @@ function(rock_add_test TARGET_NAME __rock_test_parameters)
             PROPERTIES
             DEPENDS test-${TARGET_NAME}-cxx
         )
+    elseif(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED AND NOT ROCK_CXX_GCOVR_ENABLED)
+        message(FATAL_ERROR "Cannot generate reports without GCOVR enabled.")
     endif()
 endfunction()
 
