@@ -137,6 +137,14 @@ at toplevel, like this:\
         add_link_options("-fsanitize=${ROCK_USE_SANITIZERS}")
     endif()
 
+    option(ROCK_CXX_GCOVR_ENABLED "Compile with coverage generation (needs to be enabled if ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED is ON)" OFF)
+    if (ROCK_CXX_GCOVR_ENABLED)
+        add_compile_options("--coverage")
+        add_link_options("--coverage")
+        add_compile_options("-fprofile-abs-path")
+        add_link_options("-fprofile-abs-path")
+    endif()
+
     if (ROCK_TEST_ENABLED)
         enable_testing()
     endif()
@@ -290,6 +298,8 @@ macro(rock_standard_layout)
 
     if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/test)
         option(ROCK_TEST_ENABLED "set to ON to enable the unit tests" OFF)
+        option(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED "Generate gcovr reports after test runs" OFF)
+
         if (ROCK_TEST_ENABLED)
             add_subdirectory(test)
         else()
@@ -307,9 +317,11 @@ macro(rock_standard_layout)
 
     option(ROCK_CLANG_LINTING_CHECK_ENABLED
            "set to ON to linting check on test targets" OFF)
-    if (ROCK_CLANG_LINTING_CHECK_ENABLED)
+    if (ROCK_CLANG_LINTING_CHECK_ENABLED AND NOT ROCK_CXX_GCOVR_ENABLED)
         enable_testing()
         rock_setup_linting_check(${PROJECT_NAME} ${source_and_test_files})
+    elseif(ROCK_CLANG_LINTING_CHECK_ENABLED AND ROCK_CXX_GCOVR_ENABLED)
+        message(FATAL_ERROR "Clang-tidy (linting) cannot be enabled with GCOV")
     endif()
 
     set(ROCK_STANDARD_LAYOUT_DONE ON)
@@ -1352,6 +1364,35 @@ function(rock_gtest TARGET_NAME)
     rock_add_test(${TARGET_NAME} "${__rock_test_parameters}")
 endfunction()
 
+function(rock_cxx_coverage_report PROJECT_NAME)
+    message(STATUS "Generating report for ${PROJECT_NAME} package")
+    find_program(
+        gcovr_exec NAMES
+        ${ROCK_GCOVR_EXECUTABLE} gcovr
+    )
+    if (NOT gcovr_exec)
+        message(FATAL_ERROR "Could not find an executable for gcovr.")
+    endif()
+
+    if(ROCK_COVERAGE_REPORT_PATH)
+        message(STATUS "Coverage report will be generated in ${ROCK_COVERAGE_REPORT_PATH}")
+        set(gcovr_config_option --filter ${PROJECT_SOURCE_DIR}/src/ --html -o ${ROCK_COVERAGE_REPORT_PATH}/coverage.html)
+    else()
+        message(STATUS "Default coverage path set to /build")
+        set(gcovr_config_option --filter ${PROJECT_SOURCE_DIR}/src/ --html -o ${PROJECT_BINARY_DIR}/coverage.html)
+    endif()
+
+    add_test(
+        NAME
+        ${PROJECT_NAME}_report_generation
+        COMMAND
+        ${gcovr_exec}
+        ${PROJECT_SOURCE_DIR}
+        ${gcovr_config_option}
+        ${ROCK_GCOVR_EXTRA_OPTIONS}
+    )
+endfunction()
+
 function(rock_get_clang_targets VAR filepath)
     if (EXISTS "${filepath}")
         file(STRINGS ${filepath} checklist REGEX "^(\\+|-)+")
@@ -1471,6 +1512,20 @@ function(rock_add_test TARGET_NAME __rock_test_parameters)
     add_test(NAME test-${TARGET_NAME}-cxx
              COMMAND ${EXECUTABLE_OUTPUT_PATH}/${TARGET_NAME}
              ${__rock_test_parameters})
+
+    if(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED AND ROCK_CXX_GCOVR_ENABLED)
+        if(NOT TARGET ${PROJECT_NAME}_report_generation)
+            rock_cxx_coverage_report(${PROJECT_NAME})
+        endif()
+
+        set_tests_properties(
+            ${PROJECT_NAME}_report_generation
+            PROPERTIES
+            DEPENDS test-${TARGET_NAME}-cxx
+        )
+    elseif(ROCK_TEST_CXX_GCOVR_GENERATION_ENABLED AND NOT ROCK_CXX_GCOVR_ENABLED)
+        message(FATAL_ERROR "Cannot generate reports without GCOVR enabled.")
+    endif()
 endfunction()
 
 ## Get the library name from a given path
