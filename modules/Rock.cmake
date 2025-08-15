@@ -745,7 +745,6 @@ function(rock_target_resolve_transitive_dependencies TARGETS LIBS)
 endfunction()
 
 macro(rock_filter_cflag_definitions DEFS_VAR OPTS_VAR FEATS_VAR)
-    message(STATUS "filtering ${ARGN}")
     set(${DEFS_VAR})
     set(${OPTS_VAR})
     set(${FEATS_VAR})

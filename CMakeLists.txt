@@ -14,6 +14,7 @@ install(FILES
     modules/PythonInstallPath.cmake
     modules/Rock.cmake
     modules/RockRuby.cmake
+    modules/RockQt.cmake
     modules/rock-config.cmake
     DESTINATION share/rock/cmake)
 
