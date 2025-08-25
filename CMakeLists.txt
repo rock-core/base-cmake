@@ -7,7 +7,6 @@ rock_init()
 install(FILES
     modules/FindGem.cmake
     modules/FindNumpy.cmake
-    modules/FindRuby.cmake
     modules/FindSISL.cmake
     modules/ListMacros.cmake
     modules/PythonBind.cmake
