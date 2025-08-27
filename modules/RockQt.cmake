@@ -594,13 +594,15 @@ function(rock_qt_vizkit_widget)
         endif()
     endforeach()
     if(DEFINED PREPARED_ARGS_QT4)
-        install(FILES ${TARGET_NAME_QT4}.rb
-            DESTINATION share/vizkit/ext
-            OPTIONAL)
-        install(FILES vizkit_widget.rb
-            DESTINATION lib/qt/designer/cplusplus_extensions
-            RENAME ${PROJECT_NAME}_vizkit.rb
-            OPTIONAL)
+        if (${TARGET_NAME_QT4}_INSTALL)
+            install(FILES ${TARGET_NAME_QT4}.rb
+                DESTINATION share/vizkit/ext
+                OPTIONAL)
+            install(FILES vizkit_widget.rb
+                DESTINATION lib/qt/designer/cplusplus_extensions
+                RENAME ${PROJECT_NAME}_vizkit.rb
+                OPTIONAL)
+        endif()
     endif()
 endfunction()
 
