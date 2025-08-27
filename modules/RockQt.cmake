@@ -178,6 +178,13 @@
 
 include(Rock)
 
+cmake_policy(PUSH)
+# this enables if(VAR STREQUAL "QUOTED") to interpret "QOUTED" as a string,
+# even when a variable of the same name exists. OLD will dereference QOUTED,
+# and use the result of that instead in the comparison, just like
+# if(VAR STREQUAL UNQOUTED) would.
+cmake_policy(SET CMP0054 NEW)
+
 #
 # INTERNAL
 #
@@ -332,7 +339,7 @@ function(rock_qt_filter_component_arguments QT_VER)
             endif()
         endforeach()
         foreach(MODE ${MODES})
-            if(ELEMENT STREQUAL "${MODE}")
+            if(ELEMENT STREQUAL MODE)
                 set(CURRENTMODE "${ELEMENT}")
                 set(IS_CONSUMED 1)
             endif()
@@ -346,11 +353,11 @@ function(rock_qt_filter_component_arguments QT_VER)
         endforeach()
 
         if(NOT IS_CONSUMED)
-            if(CURRENTMODE STREQUAL BAD)
+            if(CURRENTMODE STREQUAL "BAD")
                 message(FATAL_ERROR "Found element \"${ELEMENT}\" while there is no mode active")
             endif()
 
-            if(NOT (CURRENTMODE STREQUAL IGNORE))
+            if(NOT (CURRENTMODE STREQUAL "IGNORE"))
                 list(APPEND ${CURRENTMODE} ${ELEMENT})
             endif()
         endif()
@@ -541,7 +548,7 @@ endfunction()
 
 function(rock_qt_vizkit_plugin)
     unset(additional_deps)
-    if (${PROJECT_NAME} STREQUAL "vizkit3d")
+    if (PROJECT_NAME STREQUAL "vizkit3d")
         # vizkit3d provides the library and uses its own target
     else()
         list(APPEND additional_deps DEPS_PKGCONFIG_QT4 vizkit3d
@@ -588,3 +595,5 @@ function(rock_qt_vizkit_widget)
             OPTIONAL)
     endif()
 endfunction()
+
+cmake_policy(POP)
