@@ -569,6 +569,14 @@ function(rock_qt_vizkit_plugin)
             endif()
         endif()
     endforeach()
+    if(DEFINED PREPARED_ARGS_QT4)
+        if (${TARGET_NAME_QT4}_INSTALL)
+            install(FILES vizkit_plugin.rb
+                DESTINATION lib/qt/designer/widgets
+                RENAME ${PROJECT_NAME}_vizkit.rb
+                OPTIONAL)
+        endif()
+    endif()
 endfunction()
 
 function(rock_qt_vizkit_widget)
