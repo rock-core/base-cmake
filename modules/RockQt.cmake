@@ -178,6 +178,13 @@
 
 include(Rock)
 
+cmake_policy(PUSH)
+# this enables if(VAR STREQUAL "QUOTED") to interpret "QOUTED" as a string,
+# even when a variable of the same name exists. OLD will dereference QOUTED,
+# and use the result of that instead in the comparison, just like
+# if(VAR STREQUAL UNQOUTED) would.
+cmake_policy(SET CMP0054 NEW)
+
 #
 # INTERNAL
 #
@@ -332,7 +339,7 @@ function(rock_qt_filter_component_arguments QT_VER)
             endif()
         endforeach()
         foreach(MODE ${MODES})
-            if(ELEMENT STREQUAL "${MODE}")
+            if(ELEMENT STREQUAL MODE)
                 set(CURRENTMODE "${ELEMENT}")
                 set(IS_CONSUMED 1)
             endif()
@@ -346,11 +353,11 @@ function(rock_qt_filter_component_arguments QT_VER)
         endforeach()
 
         if(NOT IS_CONSUMED)
-            if(CURRENTMODE STREQUAL BAD)
+            if(CURRENTMODE STREQUAL "BAD")
                 message(FATAL_ERROR "Found element \"${ELEMENT}\" while there is no mode active")
             endif()
 
-            if(NOT (CURRENTMODE STREQUAL IGNORE))
+            if(NOT (CURRENTMODE STREQUAL "IGNORE"))
                 list(APPEND ${CURRENTMODE} ${ELEMENT})
             endif()
         endif()
@@ -524,7 +531,7 @@ endmacro()
 function(rock_qt_library)
     rock_qt_common(${ARGN})
     foreach(QT_VER QT4 QT5 QT6)
-        if(PREPARED_ARGS_${QT_VER})
+        if(DEFINED PREPARED_ARGS_${QT_VER})
             rock_library(${PREPARED_ARGS_${QT_VER}})
         endif()
     endforeach()
@@ -533,7 +540,7 @@ endfunction()
 function(rock_qt_executable)
     rock_qt_common(${ARGN})
     foreach(QT_VER QT4 QT5 QT6)
-        if(PREPARED_ARGS_${QT_VER})
+        if(DEFINED PREPARED_ARGS_${QT_VER})
             rock_executable(${PREPARED_ARGS_${QT_VER}})
         endif()
     endforeach()
@@ -541,7 +548,7 @@ endfunction()
 
 function(rock_qt_vizkit_plugin)
     unset(additional_deps)
-    if (${PROJECT_NAME} STREQUAL "vizkit3d")
+    if (PROJECT_NAME STREQUAL "vizkit3d")
         # vizkit3d provides the library and uses its own target
     else()
         list(APPEND additional_deps DEPS_PKGCONFIG_QT4 vizkit3d
@@ -550,7 +557,7 @@ function(rock_qt_vizkit_plugin)
     rock_qt_common(${ARGN} ${additional_deps})
 
     foreach(QT_VER QT4 QT5 QT6)
-        if(PREPARED_ARGS_${QT_VER})
+        if(DEFINED PREPARED_ARGS_${QT_VER})
             rock_library_common(${PREPARED_ARGS_${QT_VER}})
             if (${TARGET_NAME_${QT_VER}}_INSTALL)
                 if (${TARGET_NAME_${QT_VER}}_LIBRARY_HAS_TARGET)
@@ -562,13 +569,21 @@ function(rock_qt_vizkit_plugin)
             endif()
         endif()
     endforeach()
+    if(DEFINED PREPARED_ARGS_QT4)
+        if (${TARGET_NAME_QT4}_INSTALL)
+            install(FILES vizkit_plugin.rb
+                DESTINATION lib/qt/designer/widgets
+                RENAME ${PROJECT_NAME}_vizkit.rb
+                OPTIONAL)
+        endif()
+    endif()
 endfunction()
 
 function(rock_qt_vizkit_widget)
     rock_qt_common(${ARGN})
 
     foreach(QT_VER QT4 QT5 QT6)
-        if(PREPARED_ARGS_${QT_VER})
+        if(DEFINED PREPARED_ARGS_${QT_VER})
             rock_library_common(${PREPARED_ARGS_${QT_VER}})
             if (${TARGET_NAME_${QT_VER}}_INSTALL)
                 install(TARGETS ${TARGET_NAME_${QT_VER}}
@@ -578,13 +593,17 @@ function(rock_qt_vizkit_widget)
             endif()
         endif()
     endforeach()
-    if(PREPARED_ARGS_QT4)
-        install(FILES ${TARGET_NAME_QT4}.rb
-            DESTINATION share/vizkit/ext
-            OPTIONAL)
-        install(FILES vizkit_widget.rb
-            DESTINATION lib/qt/designer/cplusplus_extensions
-            RENAME ${PROJECT_NAME}_vizkit.rb
-            OPTIONAL)
+    if(DEFINED PREPARED_ARGS_QT4)
+        if (${TARGET_NAME_QT4}_INSTALL)
+            install(FILES ${TARGET_NAME_QT4}.rb
+                DESTINATION share/vizkit/ext
+                OPTIONAL)
+            install(FILES vizkit_widget.rb
+                DESTINATION lib/qt/designer/cplusplus_extensions
+                RENAME ${PROJECT_NAME}_vizkit.rb
+                OPTIONAL)
+        endif()
     endif()
 endfunction()
+
+cmake_policy(POP)
