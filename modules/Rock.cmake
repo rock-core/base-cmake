@@ -939,7 +939,11 @@ function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
 
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
+            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc.confd @ONLY)
+        file(GENERATE
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
+            INPUT ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc.confd
+            )
         if (DO_INSTALL)
             install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
                 DESTINATION lib/pkgconfig)
