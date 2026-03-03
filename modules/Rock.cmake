@@ -568,18 +568,24 @@ macro(rock_target_definition TARGET_NAME)
             ${__dep})
     endforeach()
 
+    set(__link_dirs)
+    set(__include_dirs)
     foreach(__dep ${__dependent_targets})
         get_property(__dep_link_dirs TARGET ${__dep} PROPERTY INTERFACE_LINK_DIRECTORIES)
-        foreach(__dep_linkdir ${__dep_link_dirs})
-            set(${TARGET_NAME}_PKGCONFIG_LIBS
-                "${${TARGET_NAME}_PKGCONFIG_LIBS} -L${__dep_linkdir}")
-        endforeach()
+        list(APPEND __link_dirs ${__dep_link_dirs})
 
         get_property(__dep_include_dirs TARGET ${__dep} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-        foreach(__dep_incdir ${__dep_include_dirs})
-            set(${TARGET_NAME}_PKGCONFIG_CFLAGS
-                "${${TARGET_NAME}_PKGCONFIG_CFLAGS} -I${__dep_incdir}")
-        endforeach()
+        list(APPEND __include_dirs ${__dep_include_dirs})
+    endforeach()
+    list(REMOVE_DUPLICATES __link_dirs)
+    foreach(__linkdir ${__link_dirs})
+        set(${TARGET_NAME}_PKGCONFIG_LIBS
+            "${${TARGET_NAME}_PKGCONFIG_LIBS} -L${__linkdir}")
+    endforeach()
+    list(REMOVE_DUPLICATES __include_dirs)
+    foreach(__incdir ${__include_dirs})
+        set(${TARGET_NAME}_PKGCONFIG_CFLAGS
+            "${${TARGET_NAME}_PKGCONFIG_CFLAGS} -I${__incdir}")
     endforeach()
 
     list(LENGTH ${TARGET_NAME}_MOC QT_MOC_LENGTH)
@@ -739,6 +745,9 @@ function(rock_target_resolve_transitive_dependencies TARGETS LIBS)
             list(APPEND libs ${obj})
         endif()
     endforeach()
+
+    list(REMOVE_DUPLICATES targets)
+    list(REMOVE_DUPLICATES libs)
 
     set(${TARGETS} "${targets}" PARENT_SCOPE)
     set(${LIBS} "${libs}" PARENT_SCOPE)
@@ -939,7 +948,11 @@ function(rock_prepare_pkgconfig TARGET_NAME DO_INSTALL)
 
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in)
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_NAME}.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
+            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc.confd @ONLY)
+        file(GENERATE
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
+            INPUT ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc.confd
+            )
         if (DO_INSTALL)
             install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc
                 DESTINATION lib/pkgconfig)
