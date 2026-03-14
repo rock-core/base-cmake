@@ -568,8 +568,8 @@ macro(rock_target_definition TARGET_NAME)
             ${__dep})
     endforeach()
 
-    set(__link_dirs)
-    set(__include_dirs)
+    set(__link_dirs "")
+    set(__include_dirs "")
     foreach(__dep ${__dependent_targets})
         get_property(__dep_link_dirs TARGET ${__dep} PROPERTY INTERFACE_LINK_DIRECTORIES)
         list(APPEND __link_dirs ${__dep_link_dirs})
@@ -577,11 +577,13 @@ macro(rock_target_definition TARGET_NAME)
         get_property(__dep_include_dirs TARGET ${__dep} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
         list(APPEND __include_dirs ${__dep_include_dirs})
     endforeach()
+
     list(REMOVE_DUPLICATES __link_dirs)
     foreach(__linkdir ${__link_dirs})
         set(${TARGET_NAME}_PKGCONFIG_LIBS
             "${${TARGET_NAME}_PKGCONFIG_LIBS} -L${__linkdir}")
     endforeach()
+
     list(REMOVE_DUPLICATES __include_dirs)
     foreach(__incdir ${__include_dirs})
         set(${TARGET_NAME}_PKGCONFIG_CFLAGS
@@ -724,6 +726,8 @@ macro(rock_target_definition TARGET_NAME)
 endmacro()
 
 function(rock_target_resolve_transitive_dependencies TARGETS LIBS)
+    set(targets "")
+    set(libs "")
     foreach(obj ${ARGN})
         if (TARGET ${obj})
             get_target_property(target_type ${obj} TYPE)
@@ -747,9 +751,8 @@ function(rock_target_resolve_transitive_dependencies TARGETS LIBS)
     endforeach()
 
     list(REMOVE_DUPLICATES targets)
-    list(REMOVE_DUPLICATES libs)
-
     set(${TARGETS} "${targets}" PARENT_SCOPE)
+    list(REMOVE_DUPLICATES libs)
     set(${LIBS} "${libs}" PARENT_SCOPE)
 endfunction()
 
