@@ -512,25 +512,19 @@ macro(rock_target_definition TARGET_NAME)
 
     foreach (internal_dep ${${TARGET_NAME}_DEPS})
         get_target_property(internal_dep_type ${internal_dep} TYPE)
+        if (${internal_dep_type} STREQUAL "INTERFACE_LIBRARY")
+            set(interface_prefix "INTERFACE_")
+        endif()
+
         foreach(dep_mode PLAIN CMAKE PKGCONFIG TARGET)
-            if (${internal_dep_type} STREQUAL "INTERFACE_LIBRARY")
             get_property(internal_dep_DEPS TARGET ${internal_dep}
-                PROPERTY INTERFACE_DEPS_PUBLIC_${dep_mode})
-            else()
-                get_property(internal_dep_DEPS TARGET ${internal_dep}
-                    PROPERTY DEPS_PUBLIC_${dep_mode})
-            endif()
+                PROPERTY ${interface_prefix}DEPS_PUBLIC_${dep_mode})
 
             if (internal_dep_DEPS)
                 list(APPEND ${TARGET_NAME}_DEPS_${dep_mode} ${internal_dep_DEPS})
             else()
-                if (${internal_dep_type} STREQUAL "INTERFACE_LIBRARY")
-                    get_property(internal_dep_DEPS TARGET ${internal_dep}
-                        PROPERTY INTERFACE_DEPS_${dep_mode})
-                else()
-                    get_property(internal_dep_DEPS TARGET ${internal_dep}
-                        PROPERTY DEPS_${dep_mode})
-               endif()
+                get_property(internal_dep_DEPS TARGET ${internal_dep}
+                    PROPERTY ${interface_prefix}DEPS_${dep_mode})
                list(APPEND ${TARGET_NAME}_DEPS_${dep_mode} ${internal_dep_DEPS})
             endif()
         endforeach()
